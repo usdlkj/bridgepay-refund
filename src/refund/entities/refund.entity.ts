@@ -1,6 +1,20 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { RefundDetail } from "./refund-detail.entity";
 
+export enum RefundStatus {
+  RBDAPPROVAL = 'rbdApproval',
+  FINANCEAPPROVAL = 'financeApproval',
+  PENDINGDISBURSEMENT = 'pendingDisbursement',
+  REJECT="reject",
+  SUCCESS="success",
+  FAIL="fail",
+  DONE="done",
+  ONHOLD="onHold",
+  CANCEL="cancel",
+  RETRY="retry",
+  PENDINGCHECKING="pendingChecking"
+}
+
 @Entity('refunds')
 export class Refund {
   @PrimaryGeneratedColumn()
@@ -15,20 +29,11 @@ export class Refund {
 
   @Column({
     name: 'refund_status',
-    type: 'text',
+    enum: RefundStatus,
     nullable: true,
+    default: RefundStatus.RBDAPPROVAL,
   })
-  refundStatus:
-    | 'rbdApproval'
-    | 'financeApproval'
-    | 'pendingDisbursement'
-    | 'reject'
-    | 'success'
-    | 'fail'
-    | 'done'
-    | 'onHold'
-    | 'cancel'
-    | 'retry';
+  refundStatus:RefundStatus;
 
   @Column({ name: 'refund_amount', type: 'numeric', nullable: true })
   refundAmount: number;
@@ -76,7 +81,7 @@ export class Refund {
   pgCallback: Record<string, any>[]; // webhook/callback logs
 
   @Column({ name: 'retry_attempt', type: 'jsonb', nullable: true })
-  retryAttempt: Record<string, any>[];
+  retryAttempt: string[];
 
   @Column({ name: 'retry_date', type: 'timestamptz', nullable: true })
   retryDate: Date;
@@ -85,7 +90,7 @@ export class Refund {
   targetRefundDate: Date;
 
   @Column({ name: 'refund_execute_data', type: 'jsonb', nullable: true })
-  refundExecuteData: Record<string, any>;
+  refundExecuteData: Record<any, any>;
 
   @Column({ name: 'notif_log', type: 'jsonb', nullable: true })
   notifLog: Record<string, any>[];
