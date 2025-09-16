@@ -10,7 +10,7 @@ import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository,IsNull, Not } from 'typeorm';
+import {  Repository,IsNull, Not } from 'typeorm';
 import axios from 'axios';
 
 @Injectable()

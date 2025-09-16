@@ -1,5 +1,9 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { ReportDataRow } from "./report-data-row.entity";
+export enum reportType{
+    ILUMA="iluma",
+    REFUND="refund"
+}
 
 @Entity('reports')
 export class Report {

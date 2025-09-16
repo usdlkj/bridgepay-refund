@@ -1,7 +1,7 @@
 import { Injectable,Inject,HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
-import { IlumaCallLog } from './entities/iluma-call-log.entiy';
+import { IlumaCallLog } from './entities/iluma-call-log.entity';
 import { IlumaCallback } from './entities/iluma-callback.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { BrokerModule } from 'src/broker/broker.module';
@@ -70,6 +70,13 @@ private env: string;
         }
         return result;
     }
+    let payloadLog = {
+        url:"https://api.iluma.ai/v1.2/identity/bank_account_validation_details",
+        payload:bankData,
+        method:"post",
+        response:checkIluma.data
+    }
+    await this.repositoryCallLog.save(payloadLog);
     let status;
     if(checkIluma.data.status.toLowerCase()=="pending"){
         let ilumaPayload = {
@@ -81,6 +88,7 @@ private env: string;
    
         
         }
+        
         let ilumaReq = await this.repositoryCallback.save(ilumaPayload);
         if(!ilumaReq){
             result = {
@@ -95,13 +103,18 @@ private env: string;
             let sleep = await this.helper.sleep(10000)
             let payloadGetResult ={
                 provider:"iluma",
-                func:"bank-validator",
-                data:{
-                    id:checkIluma.data.id
-                },
+                func:"get-result",
+                requestId:checkIluma.data.id,
                 credential:process.env.ILUMA_TOKEN
             }
             let check = await this.coreService.send({cmd:"refund-core-service"},payloadGetResult).toPromise();
+            let payloadLog = {
+                url:"https://api.iluma.ai/v1.2/identity/bank_account_validation_details/"+checkIluma.data.id+"",
+                payload:checkIluma.data.id,
+                method:"post",
+                response:check
+            }
+            await this.repositoryCallLog.save(payloadLog);
             if(check.data.status.toLowerCase()=="completed" && check.data.result.is_found==true && check.data.result.is_virtual_account==false){
                 status="success"
                 accountName=check.data.result.account_holder_name;
