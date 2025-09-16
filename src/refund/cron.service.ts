@@ -11,14 +11,12 @@ import { Repository} from 'typeorm';
 import { Helper } from 'src/utils/helper';
 import { BackofficeService } from './backoffice.service';
 const TIMEZONE_WIB = 'Asia/Jakarta';
-const TIMELAPSE_RETRY_REFUND= '/10 * * * *';
+const TIMELAPSE_RETRY_REFUND= '*/10 * * * *';
 @Injectable()
 export class CronService {
     private env: string;
         
     constructor(
-    private helper:Helper,
-    @Inject('RefundToCoreClient') private readonly coreService: ClientProxy,
 
 
     @InjectRepository(Refund)
@@ -33,17 +31,17 @@ export class CronService {
 
     @Cron(TIMELAPSE_RETRY_REFUND, { timeZone: TIMEZONE_WIB })
     async retryRefund() {
+        // console.log("retryRefund start")
         await this.#retry();
     }
 
     async #retry(){
         try{
           let date = moment().toISOString();
-
           let data = await this.repositoryRefund.createQueryBuilder("refund")
           .where('refund.retryDate IS NOT NULL')
           .andWhere('refund.retryDate between :startDate and :endDate', { endDate: date, startDate: moment().subtract(2,"h").toISOString() })
-          .andWhere('refund.refundStaus=fail')
+          .andWhere(`refund.refundStatus='fail'`)
           .getMany();
           if(data.length > 0){
             for(let row of data){

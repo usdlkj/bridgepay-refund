@@ -15,6 +15,25 @@ export enum RefundStatus {
   PENDINGCHECKING="pendingChecking"
 }
 
+export class SearchRefundStatus {
+  get(search){
+    let data=[]
+    data["rbdApproval"]=RefundStatus.RBDAPPROVAL
+    data["financeApproval"]=RefundStatus.FINANCEAPPROVAL
+    data["pendingDisbursement"]=RefundStatus.PENDINGDISBURSEMENT
+    data["reject"]=RefundStatus.REJECT
+    data["success"]=RefundStatus.SUCCESS
+    data["fail"]=RefundStatus.FAIL
+    data["done"]=RefundStatus.DONE
+    data["onHold"]=RefundStatus.ONHOLD
+    data["cancel"]=RefundStatus.CANCEL
+    data["retry"]=RefundStatus.RETRY
+    data["pendingChecking"]=RefundStatus.PENDINGCHECKING
+    
+    return data[search]
+  }
+}
+
 @Entity('refunds')
 export class Refund {
   @PrimaryGeneratedColumn()

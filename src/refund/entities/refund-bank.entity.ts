@@ -1,5 +1,20 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 
+export enum BankStatus {
+  ENABLE = "enable",
+  DISABLE = "disable"
+}
+
+export class SearchBankStatus {
+  get(search){
+    let data=[]
+    data["enable"]=BankStatus.ENABLE
+    data["disable"]=BankStatus.DISABLE
+    
+    return data[search]
+  }
+}
+
 @Entity('refund_banks')
 export class RefundBank {
   @PrimaryGeneratedColumn()

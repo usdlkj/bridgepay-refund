@@ -1,4 +1,5 @@
 import { ReportModule } from './report/report.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -37,6 +38,7 @@ import rabbitmqConfig from './config/rabbitmq.config';
         };
       },
     }),
+    ScheduleModule.forRoot(),
     IlumaModule,
     RefundModule,
     ReportModule,

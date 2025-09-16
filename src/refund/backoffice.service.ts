@@ -3,13 +3,15 @@ import { ClientProxy } from '@nestjs/microservices';
 import { BrokerModule } from 'src/broker/broker.module';
 import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
-import { ConfigService } from '@nestjs/config';
-import { RefundBank } from 'src/refund/entities/refund-bank.entity';
+import { ConfigService } from '@nestjs/config'
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not } from 'typeorm';
-import { Refund,RefundStatus } from './entities/refund.entity';
+import { Refund,RefundStatus,SearchRefundStatus } from './entities/refund.entity';
 import { RefundService } from './refund.service';
+import { privateDecrypt } from 'crypto';
+const listType =['string',"json","number","date","enum","date"];
+const field=["refund_id","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
 
 @Injectable()
 export class BackofficeService {
@@ -18,41 +20,93 @@ export class BackofficeService {
         constructor(
         private helper:Helper,
         @Inject('RefundToCoreClient') private readonly coreService: ClientProxy,
-    
-        @InjectRepository(RefundBank)
-        private repositoryRefundBank: Repository<RefundBank>,
 
         @InjectRepository(Refund)
         private repositoryRefund: Repository<Refund>,
     
         private readonly configService: ConfigService,
-        private readonly refundService:RefundService
+        private readonly refundService:RefundService,
+        private readonly searchRefundStatus:SearchRefundStatus
     
         ) {
         this.env = getEnv(this.configService);
         }
-
-    async bankSync(){
-        
+    
+    async list(columns){
         try{
-           this.#bankProviderSync();
-           let result={
-            status:200,
-            message:"Success"
-            }
-            return result 
+            let qb = await this.repositoryRefund.createQueryBuilder('refund');
+            if(columns){
+                for(let row of columns){
+                    let search = row.search.value;
+                    let index = row.data;
+                    if(search!=''){
+                        if(listType[index]=="string"){
+                            qb.andWhere(`"${field[index]}" iLike '%${search}%'`)
+                        }else if(listType[index]=="fixed"){
+                            qb.andWhere(`"${field[index]}" = '${search}'`)
+                        }else if(listType[index]=='number'){
+                            qb.andWhere(`"${field[index]}" = '${search}'`)
+                        }else if(listType[index]=='enum'){
+                            let statusSearch = await this.searchRefundStatus.get(search.toLowerCase());
+                            qb.andWhere(`"${field[index]}" = '${statusSearch}'`)
+                        }else if(listType[index]=='json'){
+                            qb.andWhere(`${field[index]} = '${search}'`)
+                        }else{
+                            let date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
+                            let startDate = date.toISOString();
+                            let endDate = date.add(1, 'day').toISOString();
+                            qb.andWhere(`"${field[index]}" BETWEEN '${startDate}' AND '${endDate}'`)
+                        }
+
+                    }
+                }
+            } 
+            let data = await qb.getMany();
+            return data;
+    
         }catch(e){
             throw new HttpException({status:500,message:e.message}, HttpStatus.INTERNAL_SERVER_ERROR) 
         }
         
     }
 
+    async view(id){
+        return await this.repositoryRefund.findOne({
+            where:{
+                id:id
+            }
+        });
+    }
+    async pgCallback(id){
+        return await this.repositoryRefund.findOne({
+            where:{
+                id:id
+            },
+            select:{
+                pgCallback:true
+            }
+        });
+    }
+
+    async refundDetail(id){
+        return await this.repositoryRefund.findOne({
+            where:{
+                id:id
+            },
+            relations:{
+                refundDetail:{
+                    ticketData:true
+                }
+            }
+        });
+    }
+
+
+
     async retryDisbursement(refundId){
         try{
             let whereConfig = {
-                where:{
-                    configName: "REFUND_TRY_COUNT"
-                }
+                configName: "REFUND_TRY_COUNT"
             }
             let tryCount = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
             let config = 1;
@@ -71,8 +125,8 @@ export class BackofficeService {
             if(!check){
                 throw new Error("Refund not found")
             }
-
-            if(failAttempt==check.retryAttempt.length){
+            let retryAttempt = check.retryAttempt?check.retryAttempt.length:0;
+            if(failAttempt==retryAttempt){
                 throw new Error("Max Attempt to retry");
             }
 
@@ -115,123 +169,8 @@ export class BackofficeService {
             
             
         }catch(e){
+            console.log(e);
             throw new Error(e.message)
-        }
-    }
-    async #bankProviderSync(){
-        await this.#xenditSync()
-        await this.#ilumaSync()
-    }
-
-    async #xenditSync(){
-        try{
-           
-            let credential = await this.#getXenditToken();
-            let payload = {
-                provider:"xendit",
-                func:"bank-list",
-                token:credential.secretKey
-            }
-            let xendit = await this.coreService.send({cmd:'refund-core-service'},payload).toPromise();
-            if(xendit.status!=200){
-                throw new Error(xendit.data)
-            }else{
-                let result =[];
-                // xendit.data.map(async function(value,index){
-                    
-                // })
-                for(let value of xendit.data){
-                    let temp ={
-                        bankName:value.name,
-                        xenditCode:value.code.trim(),
-                        xenditData:value
-                    }
-                    let _where={
-                        where:{
-                            xenditCode:value.code.trim()
-                        }
-                    }
-                    let upsert = await this.#bankUpsert(_where,temp);
-                    if(upsert.status==500){
-                        result.push(`xenditCode ${value.code} : ${upsert.msg}`);
-                    }
-                }
-                // if(result.length >0){
-                //     log.cronlog(JSON.stringify(result))
-                // }else{
-                //     log.cronlog("Xendit bank data synced")
-                // }
-                return "OK"
-            }
-        }catch(e){
-            throw new HttpException({status:500,message:e.message}, HttpStatus.INTERNAL_SERVER_ERROR) 
-        }
-
-    }
-    async #ilumaSync(){
-        try{
-            let payload = {
-                provider:"iluma",
-                func:"bank-list",
-                credential:this.configService.get('ilumaToken')
-            }
-            let iluma = await this.coreService.send({cmd:'refund-core-service'},payload).toPromise();
-            // console.log(iluma);
-            if(iluma.status!=200){
-                throw new Error(iluma.msg)
-            }else{
-                let result =[];
-                for(let value of iluma.data){
-                    let _where= {
-                        where:{
-                            xenditCode:value.code.trim()
-                        }
-                    }
-                    let check = await this.repositoryRefundBank.findOne(_where);
-                    if(check){
-                        let data ={
-                            ilumaCode:value.code.trim(),
-                            ilumaData:value,
-                        }
-                        let update = await this.repositoryRefundBank.update(check.id,data);
-                    }else{
-                        result.push(`iluma ${value.code} : cant mapping to xendit bank data`);
-                    }
-                }
-                // if(result.length >0){
-                //     log.cronlog(JSON.stringify(result))
-                // }else{
-                //     log.cronlog("iluma bank data synced")
-                // }
-            }
-        }catch(e){
-            throw new HttpException({status:500,message:e.message}, HttpStatus.INTERNAL_SERVER_ERROR) 
-        }
-    }
-
-    async #bankUpsert(where: object,payload:object){
-        try{
-            let check = await this.repositoryRefundBank.findOne(where);
-            // console.log(check);
-            let result;
-            if(check){
-                payload["updatedAt"]=moment().toISOString()
-                result = await this.repositoryRefundBank.update(check.id,payload);
-            }else{
-
-                payload["createdAt"]=moment().toISOString()
-                payload["updatedAt"]=moment().toISOString(),
-               result = await this.repositoryRefundBank.save(payload);
-            }
-            return {
-                status:200,
-                msg:"Success"
-            }
-        }catch(e){
-            return {
-                status:500,
-                msg:e.message
-            }
         }
     }
 
@@ -241,5 +180,5 @@ export class BackofficeService {
         // console.log(credentialData);
         const credential = credentialData[await this.configService.get('nodeEnv')];
         return credential
-      }
+    }
 }

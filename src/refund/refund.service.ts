@@ -167,9 +167,7 @@ export class RefundService {
             if(create){
                 let refundDelay=0;
                 let whereConfig = {
-                    where:{
-                        configName: "REFUND_DELAY"
-                    }
+                    configName: "REFUND_DELAY"
                 }
                 let delayConfig = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
                 if(delayConfig){

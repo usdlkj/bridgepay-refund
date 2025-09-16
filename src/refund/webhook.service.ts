@@ -54,7 +54,7 @@ export class WebhookService {
                 let check = await this.repositoryRefund.findOne(_where);
                 if(check){
                     let failCode = null
-                    if(data.statu.toLowerCase()=='failed'){
+                    if(data.status.toLowerCase()=='failed'){
                         failCode = data.failure_code;
                     } 
                     //pgCallback
@@ -149,17 +149,17 @@ export class WebhookService {
                             await this.#notifTicketing(check.refundData,tickectingPayload,check.id,check.notifLog,"fail",pgCallback);
                         }else{
                             let whereConfig = {
-                                where:{
-                                    configName: "REFUND_TRY_COUNT"
-                                }
+                                configName: "REFUND_TRY_COUNT"
                             }
                             let tryCount = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
+                            console.log(tryCount);
                             let config = 1;
                             if(tryCount){
                                 config=tryCount.configValue;
                             }
                             let failAttempt = config ||  1
-                            if(failAttempt == check.retryAttempt.length){
+                            let retryAttempt= check.retryAttempt?check.retryAttempt.length:0;
+                            if(failAttempt == retryAttempt){
                                 let payload ={}
                                 let payloadSign={}
                                 
@@ -193,9 +193,7 @@ export class WebhookService {
                                 await this.#notifTicketing(check.refundData,tickectingPayload,check.id,check.notifLog,"fail",pgCallback);
                             }else{
                                 let whereConfigTryPeriod = {
-                                    where:{
-                                        configName: "⁠REFUND_TRY_TIME_PERIOD"
-                                    }
+                                    configName: "⁠REFUND_TRY_TIME_PERIOD"
                                 }
                                 let tyrPeriod = await this.coreService.send({cmd:'get-config-data'},whereConfigTryPeriod).toPromise();
                                 let configTryPeriod = 10;
@@ -207,7 +205,6 @@ export class WebhookService {
                                     configTryPeriod=60;
                                 }
                                 let retryDate =moment().add((configTryPeriod),"m").toISOString();
-
                                 await this.repositoryRefund.update(check.id,{
                                     refundStatus:RefundStatus.FAIL,
                                     pgCallback:pgCallback,
@@ -216,8 +213,9 @@ export class WebhookService {
 
                             }
                         }
-                        return { message: "OK" } 
+                        
                     }
+                    return { message: "OK" } 
                 }else{
                     throw new Error("refundId not found")
                 }
@@ -225,6 +223,7 @@ export class WebhookService {
                 throw new Error("Callback Token mismatch")
             }
         }catch(e){
+            console.log(e);
             throw new HttpException({status:500,message:"failed handle webhook"}, HttpStatus.INTERNAL_SERVER_ERROR) 
         }
       }
@@ -259,13 +258,16 @@ export class WebhookService {
             updatedAt:moment().toISOString()
         }
         if(type == "success"){
-            if(notif.status==200 && notif.data.retCode==0){
-                payload["refundStatus"]=RefundStatus.DONE
+            console.log(notif)
+            // console.log(notif.status);
+            if((notif.status==200 || notif.status==201) && notif.data.retCode==0){
+                payloadNotif["refundStatus"]=RefundStatus.DONE
             }
+            console.log(payloadNotif)
             await this.repositoryRefund.update(refundId,payloadNotif)
         }else {
-            payload["refundStatus"]=RefundStatus.FAIL
-            payload["pgCallback"]=pgCallback
+            payloadNotif["refundStatus"]=RefundStatus.FAIL
+            payloadNotif["pgCallback"]=pgCallback
             await this.repositoryRefund.update(refundId,payloadNotif)
 
         }
