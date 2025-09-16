@@ -1,6 +1,6 @@
 import { reportType } from "../entities/report.entity";
 
 export class CreateReportDto {
-    date:number;
+    date:string;
     type:reportType;
 }
