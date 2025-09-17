@@ -5,6 +5,7 @@ import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import { RefundBank,SearchBankStatus } from 'src/refund/entities/refund-bank.entity';
+import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not } from 'typeorm';
@@ -24,6 +25,8 @@ export class BankService {
         private repositoryRefundBank: Repository<RefundBank>,
         private searchBankStatus : SearchBankStatus,
 
+        @InjectRepository(IlumaCallLog)
+        private repositoryCallLog: Repository<IlumaCallLog>,
     
         private readonly configService: ConfigService,
     
@@ -156,6 +159,13 @@ export class BankService {
                 credential:this.configService.get('ilumaToken')
             }
             let iluma = await this.coreService.send({cmd:'refund-core-service'},payload).toPromise();
+            let payloadLog = {
+                url:"https://api.iluma.ai/bank/available_bank_codes",
+                payload:null,
+                method:"get",
+                response:iluma
+            }
+            await this.repositoryCallLog.save(payloadLog);
             // console.log(iluma);
             if(iluma.status!=200){
                 throw new Error(iluma.msg)

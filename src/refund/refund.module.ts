@@ -15,11 +15,11 @@ import { BankService } from './bank.service';
 import { BankController } from './bank.controller';
 import { BackofficeController } from './backoffice.controller';
 import { WebhookController } from './webhook.controller';
-import { RefundMiddleware } from './refund.middleware';
+import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Refund, RefundDetail, RefundDetailTicket, RefundBank]),BrokerModule],
+  imports: [TypeOrmModule.forFeature([Refund, RefundDetail, RefundDetailTicket, RefundBank,IlumaCallLog]),BrokerModule],
   providers: [RefundService,Helper, BackofficeService, WebhookService, CronService, BankService,SearchBankStatus,SearchRefundStatus],
   controllers: [RefundController,BankController,BackofficeController,WebhookController],
   exports: [RefundService]
