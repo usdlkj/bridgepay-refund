@@ -25,12 +25,7 @@ import { IlumaController } from './iluma/iluma.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [
-        appConfig,
-        databaseConfig,
-        rabbitmqConfig,
-        refundConfig
-      ],
+      load: [appConfig, databaseConfig, rabbitmqConfig],
     }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
