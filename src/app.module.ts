@@ -15,17 +15,12 @@ import rabbitmqConfig from './config/rabbitmq.config';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [
-        appConfig,
-        databaseConfig,
-        rabbitmqConfig,
-      ],
+      load: [appConfig, databaseConfig, rabbitmqConfig],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-
         return {
           type: 'postgres',
           host: config.get('database.host'),
@@ -34,7 +29,7 @@ import rabbitmqConfig from './config/rabbitmq.config';
           password: config.get('database.password'),
           database: config.get('database.name'),
           autoLoadEntities: true,
-          logging:["query","error"]
+          logging: ['query', 'error'],
         };
       },
     }),

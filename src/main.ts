@@ -23,6 +23,6 @@ async function bootstrap() {
   await app.init();
   await app.listen(configService.get('port') || 3000);
   
-  console.log(`Gateway is running on: ${await app.getUrl()}`);
+  console.log(`Refund is running on: ${await app.getUrl()}`);
 }
 bootstrap();
