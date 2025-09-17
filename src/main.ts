@@ -2,11 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-
+  const logger = app.get(Logger);
   // Attach the microservice listener to the main application instance.
   // This is the key change.
   app.connectMicroservice<MicroserviceOptions>({
@@ -17,12 +19,10 @@ async function bootstrap() {
       queueOptions: { durable: true },
     },
   });
-
+  
+  app.useLogger(logger);
   // Start both the microservice listener and the HTTP server.
   await app.startAllMicroservices();
-  await app.init();
-  await app.listen(configService.get('port') || 3000);
-  
-  console.log(`Gateway is running on: ${await app.getUrl()}`);
+  await app.listen(configService.get('port'));
 }
 bootstrap();
