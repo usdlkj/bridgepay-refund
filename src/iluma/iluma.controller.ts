@@ -12,4 +12,10 @@ export class IlumaController {
         return await this.ilumaService.checkAccount(payload);
     }
 
+    @Post('/webhook/iluma/bank-validator')
+    async ilumaBankValidator(@Body() payload:Object){
+        return await this.ilumaService.ilumaBankValidator(payload);
+    }
+
+
 }

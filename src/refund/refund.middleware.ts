@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
 
 @Injectable()
-export class PublicApiMiddleware implements NestMiddleware {
+export class RefundMiddleware implements NestMiddleware {
   private env: string;
   constructor(
     private readonly configService: ConfigService,

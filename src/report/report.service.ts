@@ -209,5 +209,27 @@ export class ReportService {
 
     }
 
+    async downloadExcel(id: string) {
+    try {
+      const report = await this.repositoryReport.findOneBy({ id: parseInt(id) });
+      if (!report) {
+        throw new Error("Report not found");
+      }
+
+      const data = report.reportData
+
+      return {
+        status: 200,
+        title: report.name,
+        data: data
+      };
+    } catch (e) {
+      return {
+        status: 500,
+        msg: e.message
+      };
+    }
+  }
+
 
 }
