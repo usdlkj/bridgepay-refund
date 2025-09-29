@@ -1,0 +1,38 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "deploy" ]
+  pull_request:
+    branches: [ "deploy" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all tags
+
+    - name: Get latest Git tag
+      run: |
+        TAG=$(git describe --tags --abbrev=0 || echo "1.0.0")  # Fallback to 1.0.0 if no tags
+        echo "IMAGE_VERSION=$TAG" >> $GITHUB_ENV
+
+    - name: Log in to private Docker registry
+      run: echo "${{ secrets.KCIC_DOCKER_PASSWORD }}" | docker login docker.kcic.co.id -u "${{ secrets.KCIC_DOCKER_USERNAME }}" --password-stdin
+
+    - name: Build the Docker image
+      run: |
+        IMAGE_NAME=docker.kcic.co.id/bridgepay-core
+        docker build . --file Dockerfile --tag $IMAGE_NAME:$IMAGE_VERSION --tag $IMAGE_NAME:latest
+        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+    - name: Push the Docker image
+      run: |
+        docker push $IMAGE_NAME:$IMAGE_VERSION
+        docker push $IMAGE_NAME:latest
