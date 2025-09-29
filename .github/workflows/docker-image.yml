@@ -28,7 +28,7 @@ jobs:
 
     - name: Build the Docker image
       run: |
-        IMAGE_NAME=docker.kcic.co.id/bridgepay-core
+        IMAGE_NAME=docker.kcic.co.id/bridgepay-refund
         docker build . --file Dockerfile --tag $IMAGE_NAME:$IMAGE_VERSION --tag $IMAGE_NAME:latest
         echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
