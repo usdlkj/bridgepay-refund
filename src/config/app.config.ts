@@ -6,4 +6,10 @@ export default () => ({
   jwtSecret : process.env.JWT_SECRET || 'YCBqMzRNatsECcf3TnWU2r4SJs74Xsay',
   ilumaToken : process.env.ILUMA_TOKEN || 'iluma_development_t8kz0E2xEjjN7PiSBnFS045HQEFj2VSMF3udWckOCpKn8tT9pHsXahlteBL',
   logsFolder: process.env.LOGS_FOLDER || 'logs',
+  blindIndexSecretKey: process.env.BLIND_INDEX_SECRET_KEY || 'default_blind_index_key',
+  awsKmsKeyId: process.env.AWS_KMS_KEY_ID || 'arn:aws:kms:ap-southeast-1:482734375715:key/302af061-c002-4584-834a-62753efb2a53',
+  awsRegion: process.env.AWS_REGION || 'ap-southeast-1',
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || 'AKIAXAZJWAMRXKJ5DOMU',
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY|| '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',
+  credentialEncryptionKey: process.env.CREDENTIAL_ENCRYPTION_KEY || 'key',
 });

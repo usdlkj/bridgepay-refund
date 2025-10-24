@@ -20,6 +20,9 @@ import refundConfig from './config/refund.config';
 import { RefundMiddleware } from './refund/refund.middleware';
 import { RefundController } from './refund/refund.controller';
 import { IlumaController } from './iluma/iluma.controller';
+import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
+import { ConfigurationModule } from './configuration/configuration.module';
+import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
 
 @Module({
   imports: [
@@ -128,6 +131,9 @@ import { IlumaController } from './iluma/iluma.controller';
     IlumaModule,
     RefundModule,
     ReportModule,
+    PaymentGatewayModule,
+    ConfigurationModule,
+    ApiLogDebugModule,
   ],
   controllers: [AppController],
   providers: [AppService],

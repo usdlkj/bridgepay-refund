@@ -6,6 +6,30 @@ const url = 'https://api.xendit.co';
 export class XenditService {
   constructor() {}
 
+  async refundBankList(payload) {
+    try {
+      const auth = payload.token + ':';
+      const key = Buffer.from(auth).toString('base64');
+      const bankList = await axios({
+        url: 'https://api.xendit.co/available_disbursements_banks',
+        method: 'get',
+        headers: {
+          Authorization: 'Basic ' + key,
+          'Content-Type': 'application/json',
+        },
+      });
+      return {
+        status: 200,
+        data: bankList.data,
+      };
+    } catch (e) {
+      return {
+        status: 500,
+        data: e.message,
+      };
+    }
+  }
+  
   async disbursement(payload) {
     try {
       const auth = payload.token + ':';
