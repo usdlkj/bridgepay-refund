@@ -9,7 +9,5 @@ export default () => ({
   blindIndexSecretKey: process.env.BLIND_INDEX_SECRET_KEY || 'default_blind_index_key',
   awsKmsKeyId: process.env.AWS_KMS_KEY_ID || '',
   awsRegion: process.env.AWS_REGION || '',
-  awsAccessKeyId: process.env.ACCESS_KEY_ID || '',
-  awsSecretAccessKey: process.env.SECRET_ACCESS_KEY|| '',
   credentialEncryptionKey: process.env.CREDENTIAL_ENCRYPTION_KEY || 'key',
 });
