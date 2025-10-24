@@ -7,7 +7,5 @@ export default () => ({
   ilumaToken : process.env.ILUMA_TOKEN || 'iluma_development_t8kz0E2xEjjN7PiSBnFS045HQEFj2VSMF3udWckOCpKn8tT9pHsXahlteBL',
   logsFolder: process.env.LOGS_FOLDER || 'logs',
   blindIndexSecretKey: process.env.BLIND_INDEX_SECRET_KEY || 'default_blind_index_key',
-  awsKmsKeyId: process.env.AWS_KMS_KEY_ID || '',
-  awsRegion: process.env.AWS_REGION || '',
   credentialEncryptionKey: process.env.CREDENTIAL_ENCRYPTION_KEY || 'key',
 });
