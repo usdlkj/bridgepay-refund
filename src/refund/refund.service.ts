@@ -8,6 +8,8 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { Refund,RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
+import { ConfigurationService } from 'src/configuration/configuration.service';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import {  Repository,IsNull, Not } from 'typeorm';
@@ -34,6 +36,10 @@ export class RefundService {
         private repositoryRefundDetailTicket: Repository<RefundDetailTicket>,
     
         private readonly configService: ConfigService,
+
+        private configurationService: ConfigurationService,
+        
+        private yggdrasilService : YggdrasilService
     
       ) {
         this.env = getEnv(this.configService);
@@ -166,12 +172,10 @@ export class RefundService {
 
             if(create){
                 let refundDelay=0;
-                let whereConfig = {
-                    configName: "REFUND_DELAY"
-                }
-                let delayConfig = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
+                
+                let delayConfig = await this.configurationService.findByConfigName("REFUND_DELAY");
                 if(delayConfig){
-                    refundDelay=delayConfig.configValue
+                    refundDelay=parseInt(delayConfig.configValue)
                 }
                 if(refundDelay<=0){
                     let refund = await this.repositoryRefund.findOne({
@@ -193,7 +197,7 @@ export class RefundService {
                         token:credential.secretKey
                     }
 
-                    let xendit = await this.coreService.send({cmd:"refund-core-service"},payloadDisbursement).toPromise();
+                    let xendit = await this.yggdrasilService.refund(payloadDisbursement);
                     if(xendit.status==200){
                     result ={
                         status:200,
@@ -268,7 +272,7 @@ export class RefundService {
                 func:"get-balance",
                 token:credential.secretKey
             }
-            let balance = await this.coreService.send({cmd:'refund-core-service'},balancePayload).toPromise();
+            let balance = await this.yggdrasilService.refund(balancePayload)
             let invoice = {}
             
             //create payload

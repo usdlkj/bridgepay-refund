@@ -8,6 +8,8 @@ import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not } from 'typeorm';
 import { Refund,RefundStatus,SearchRefundStatus } from './entities/refund.entity';
+import { ConfigurationService } from 'src/configuration/configuration.service';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { RefundService } from './refund.service';
 import { privateDecrypt } from 'crypto';
 const listType =['string',"json","number","date","enum","date"];
@@ -26,7 +28,9 @@ export class BackofficeService {
     
         private readonly configService: ConfigService,
         private readonly refundService:RefundService,
-        private readonly searchRefundStatus:SearchRefundStatus
+        private readonly searchRefundStatus:SearchRefundStatus,
+        private readonly configurationService:ConfigurationService,
+        private readonly yggdrasilService : YggdrasilService
     
         ) {
         this.env = getEnv(this.configService);
@@ -105,13 +109,11 @@ export class BackofficeService {
 
     async retryDisbursement(refundId){
         try{
-            let whereConfig = {
-                configName: "REFUND_TRY_COUNT"
-            }
-            let tryCount = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
+
+            let tryCount = await this.configurationService.findByConfigName("REFUND_TRY_COUNT")
             let config = 1;
             if(tryCount){
-                config=tryCount.configValue;
+                config=parseInt(tryCount.configValue);
             }
             let failAttempt = config ||  1
             let _where = {
@@ -156,7 +158,7 @@ export class BackofficeService {
                 token:credential.secretKey
             }
 
-            let xendit = await this.coreService.send({cmd:"refund-core-service"},payloadDisbursement).toPromise();
+            let xendit = await this.yggdrasilService.refund(payloadDisbursement)
             if(xendit.status==200){
                 result ={
                     status:200,

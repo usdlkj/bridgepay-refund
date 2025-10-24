@@ -5,6 +5,7 @@ import { IlumaCallLog } from './entities/iluma-call-log.entity';
 import { IlumaCallback } from './entities/iluma-callback.entity';
 import { ClientProxy } from '@nestjs/microservices';
 import { BrokerModule } from 'src/broker/broker.module';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
@@ -31,6 +32,8 @@ private env: string;
     private repositoryCallback: Repository<IlumaCallback>,
 
     private readonly configService: ConfigService,
+
+    private readonly yggdrasilService: YggdrasilService
 
   ) {
     this.env = getEnv(this.configService);
@@ -62,7 +65,7 @@ private env: string;
         data:bankData,
         credential:this.configService.get('ilumaToken')
     }
-    let checkIluma = await this.coreService.send({cmd:"refund-core-service"},payloadValidator).toPromise();
+    let checkIluma = await this.yggdrasilService.refund(payloadValidator)
     if(checkIluma.status!=200){
         result = {
           retCode: -1,

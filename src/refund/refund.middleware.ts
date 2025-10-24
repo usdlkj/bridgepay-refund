@@ -4,12 +4,17 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { ConfigService } from '@nestjs/config';
 import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ApiLogDebug } from 'src/api-log-debug/entities/api-log-debug.entity';
 
 @Injectable()
 export class RefundMiddleware implements NestMiddleware {
   private env: string;
   constructor(
     private readonly configService: ConfigService,
+    @InjectRepository(ApiLogDebug)
+    private repository : Repository<ApiLogDebug>
     
     ) {this.env = getEnv(this.configService);}
   async use(req: { 
@@ -52,11 +57,13 @@ export class RefundMiddleware implements NestMiddleware {
   }
   if (check == true) {
     payloadSave["signatureStatus"]="accepted";
+    await this.repository.save(payloadSave)
     // await this.coreService.send({cmd:"save-api-log-debug"},payloadSave).toPromise();
     next();
   } else {
     payloadSave["signatureStatus"]="rejected";
     // await this.coreService.send({cmd:"save-api-log-debug"},payloadSave).toPromise();
+    await this.repository.save(payloadSave)
     res.status(500).json({ retCode: -1, retMsg: "Invalid Signature" });
   }
   }

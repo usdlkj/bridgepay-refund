@@ -16,10 +16,13 @@ import { BankController } from './bank.controller';
 import { BackofficeController } from './backoffice.controller';
 import { WebhookController } from './webhook.controller';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
+import { ConfigurationModule } from 'src/configuration/configuration.module';
+import { PaymentGatewayModule } from 'src/payment-gateway/payment-gateway.module';
+import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Refund, RefundDetail, RefundDetailTicket, RefundBank,IlumaCallLog]),BrokerModule],
+  imports: [TypeOrmModule.forFeature([Refund, RefundDetail, RefundDetailTicket, RefundBank,IlumaCallLog]),BrokerModule,ConfigurationModule,PaymentGatewayModule,YggdrasilModule],
   providers: [RefundService,Helper, BackofficeService, WebhookService, CronService, BankService,SearchBankStatus,SearchRefundStatus],
   controllers: [RefundController,BankController,BackofficeController,WebhookController],
   exports: [RefundService]
