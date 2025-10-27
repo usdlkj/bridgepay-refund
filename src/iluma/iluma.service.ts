@@ -10,6 +10,7 @@ import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
+import { ConfigurationService } from 'src/configuration/configuration.service';
 import * as moment from 'moment-timezone';
 
 
@@ -33,7 +34,8 @@ private env: string;
 
     private readonly configService: ConfigService,
 
-    private readonly yggdrasilService: YggdrasilService
+    private readonly yggdrasilService: YggdrasilService,
+    private configurationService: ConfigurationService,
 
   ) {
     this.env = getEnv(this.configService);
@@ -102,15 +104,39 @@ private env: string;
         }
         status = "pending"
         let flag=0;
-        while(flag<3){
-            let sleep = await this.helper.sleep(10000)
+
+        //get limit & sleep timer
+         let getLimit = await this.configurationService.findByConfigName("CHECK_ACCOUNT_RETRY_COUNT")
+         let limit=6;
+         if(getLimit){
+            limit=parseInt(getLimit.configValue);
+          }
+          if(limit<1){
+            limit=6
+          }
+          let sleepTimer =5000;
+
+          const _whereTimer = {
+            configName:"CHECK_ACCOUNT_SLEEP_PERIOD"
+          }
+         let getTimer = await this.configurationService.findByConfigName("CHECK_ACCOUNT_SLEEP_PERIOD")
+         if(getTimer){
+            sleepTimer=parseInt(getTimer.configValue);
+          }
+          if(sleepTimer<1000){
+            sleepTimer=5000
+          }
+          //end get limit & sleep timer
+
+        while(flag<limit){
+            let sleep = await this.helper.sleep(sleepTimer)
             let payloadGetResult ={
                 provider:"iluma",
                 func:"get-result",
                 requestId:checkIluma.data.id,
-                credential:process.env.ILUMA_TOKEN
+                credential:await this.configService.get('ilumaToken')
             }
-            let check = await this.coreService.send({cmd:"refund-core-service"},payloadGetResult).toPromise();
+            let check = await this.yggdrasilService.refund(payloadGetResult);
             let payloadLog = {
                 url:"https://api.iluma.ai/v1.2/identity/bank_account_validation_details/"+checkIluma.data.id+"",
                 payload:checkIluma.data.id,
@@ -121,16 +147,16 @@ private env: string;
             if(check.data.status.toLowerCase()=="completed" && check.data.result.is_found==true && check.data.result.is_virtual_account==false){
                 status="success"
                 accountName=check.data.result.account_holder_name;
-                flag=3;
+                flag=limit;
             }else if(check.data.status.toLowerCase()=="pending"){
                 flag++;
             }else{
                 status="failed"
-                flag=3;
+                flag=limit;
             }
 
         }
-
+    console.log(status)
     }else if(checkIluma.data.status.toLowerCase()=="completed" && checkIluma.data.result.is_found==true && checkIluma.data.result.is_virtual_account==false){
         status= "success"
         accountName=checkIluma.data.result.account_holder_name;
