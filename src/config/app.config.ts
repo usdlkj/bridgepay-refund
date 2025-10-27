@@ -12,4 +12,6 @@ export default () => ({
   awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY|| '',
   credentialEncryptionKey: process.env.CREDENTIAL_ENCRYPTION_KEY || 'key',
+  backdateAccountLastCheck: process.env.BACKDATE_ACCOUNT_LAST_CHECK||30,
+  ticketingApiBaseUrl: process.env.TICKETING_API_BASE_URL||'http://8.210.58.52:9432'
 });

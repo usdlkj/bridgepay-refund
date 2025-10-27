@@ -9,10 +9,11 @@ import { Helper } from 'src/utils/helper';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
 import { ConfigurationModule } from 'src/configuration/configuration.module';
+import { BankData } from './entities/bank-data.entity';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([IlumaCallLog, IlumaCallback, RefundBank]),BrokerModule,YggdrasilModule,ConfigurationModule],
+  imports: [TypeOrmModule.forFeature([IlumaCallLog, IlumaCallback, RefundBank, BankData]),BrokerModule,YggdrasilModule,ConfigurationModule],
   providers: [IlumaService,Helper],
   controllers: [IlumaController],
   exports: [IlumaService]

@@ -1,4 +1,4 @@
-import { Injectable,Inject } from '@nestjs/common';
+import { Injectable,Inject,HttpException,HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { BrokerModule } from 'src/broker/broker.module';
 import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
@@ -8,6 +8,7 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { Refund,RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
+import { RefundLog } from './entities/refund-log.entity';
 import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
@@ -36,6 +37,9 @@ export class RefundService {
 
         @InjectRepository(RefundDetailTicket)
         private repositoryRefundDetailTicket: Repository<RefundDetailTicket>,
+
+        @InjectRepository(RefundLog)
+        private repositoryRefundLog: Repository<RefundLog>,
     
         private readonly configService: ConfigService,
 
@@ -114,7 +118,7 @@ export class RefundService {
             if(ticketingCall==1){
 
                 dataDetail = await axios({
-                    url:process.env.TICKETING_API_BASE_URL+"/payplat/bank/queryRefundTicketInfo",
+                    url:await this.configService.get('ticketingApiBaseUrl')+"/payplat/bank/queryRefundTicketInfo",
                     method:"post",
                     data:payloadDetail
                 })
@@ -247,11 +251,12 @@ export class RefundService {
                 msg:e.message,
                 notes:payload.reqData.invoice.orderId
             }
+            this.repositoryRefundLog.save(logPayload);
             let result = {
                 retCode: -1,
                 retMsg: e.message,
             }
-            return result;
+            throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         
       }
@@ -317,7 +322,7 @@ export class RefundService {
                 retCode: -1,
                 retMsg: e.message,
             }
-            return result;
+            throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
       }
 
@@ -348,7 +353,7 @@ export class RefundService {
                 retCode: -1,
                 retMsg: e.message,
             }
-            return result;
+            throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
       }
 

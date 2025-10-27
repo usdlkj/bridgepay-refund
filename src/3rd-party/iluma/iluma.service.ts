@@ -128,7 +128,7 @@ export class IlumaService {
 
   async getResult(payload) {
     try {
-      const key = this.#generateKey(payload.credential);
+      const key = await this.#generateKey(payload.credential);
       const webhook = await axios({
         url:
           'https://api.iluma.ai/v1.2/identity/bank_account_validation_details/' +
