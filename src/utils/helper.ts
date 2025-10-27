@@ -59,7 +59,6 @@ export class Helper {
    }
 
    async sign(msg){
-    console.log(refundEnv);
     let filename = refundEnv.refund.keyFilePrivate || "pgmid";
     let pkey = fs.readFileSync(path.join(__dirname, "../../key/"+filename), {
         encoding: "utf8",

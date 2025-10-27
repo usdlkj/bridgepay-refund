@@ -158,7 +158,6 @@ export class WebhookService {
                             await this.#notifTicketing(check.refundData,tickectingPayload,check.id,check.notifLog,"fail",pgCallback);
                         }else{
                             let tryCount = await this.configurationService.findByConfigName("REFUND_TRY_COUNT")
-                            console.log(tryCount);
                             let config = 1;
                             if(tryCount){
                                 config=parseInt(tryCount.configValue);

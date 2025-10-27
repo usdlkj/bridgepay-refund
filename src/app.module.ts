@@ -24,11 +24,12 @@ import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, rabbitmqConfig],
+      load: [appConfig, databaseConfig, rabbitmqConfig,refundConfig],
     }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
@@ -144,6 +145,7 @@ export class AppModule {
       .apply(RefundMiddleware)
       .exclude({path:'/api/v2/bankCodes',method:RequestMethod.GET})
       .exclude({path:'/api/v2/webhook/iluma/bank-validator',method:RequestMethod.POST})
+      .exclude({path:'/api/v2/webhook/xendit/disbursement',method:RequestMethod.POST})
       .forRoutes(RefundController,IlumaController); // Applies middleware to all routes in PostsController
   }
 }

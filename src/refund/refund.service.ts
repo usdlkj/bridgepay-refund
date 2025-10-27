@@ -8,6 +8,7 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { Refund,RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
+import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
@@ -32,6 +33,7 @@ export class RefundService {
         @InjectRepository(RefundDetail)
         private repositoryRefundDetail: Repository<RefundDetail>,
 
+
         @InjectRepository(RefundDetailTicket)
         private repositoryRefundDetailTicket: Repository<RefundDetailTicket>,
     
@@ -39,7 +41,9 @@ export class RefundService {
 
         private configurationService: ConfigurationService,
         
-        private yggdrasilService : YggdrasilService
+        private yggdrasilService : YggdrasilService,
+        
+        private paymentGatewayService: PaymentGatewayService,
     
       ) {
         this.env = getEnv(this.configService);
@@ -55,6 +59,7 @@ export class RefundService {
             }else{
             ticketingCall=1;
             }
+            console.log("sampe sini");
             let credential = await this.#getXenditToken();
             let check = await this.repositoryRefund.findOne({
                 where:{
@@ -352,7 +357,7 @@ export class RefundService {
       }  
 
       async #getXenditToken(){
-        const pgData = await this.coreService.send({ cmd: 'get-payment-gateway-like-name' },{pgName:'xendit'}).toPromise();
+        const pgData = await this.paymentGatewayService.findOneLikeName({pgName:'xendit'})
         const credentialData = JSON.parse(pgData.credential);
         // console.log(credentialData);
         const credential = credentialData[await this.configService.get('nodeEnv')];

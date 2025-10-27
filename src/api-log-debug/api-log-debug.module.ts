@@ -6,5 +6,6 @@ import { ApiLogDebug } from './entities/api-log-debug.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([ApiLogDebug])],
   providers: [ApiLogDebugService],
+  exports: [ApiLogDebugService],
 })
 export class ApiLogDebugModule {}
