@@ -38,12 +38,12 @@ export class PaymentGateway {
 
   @Column({
     unique: true,
-    name: 'pgCode',
+    name: 'pg_code',
   })
   @Index()
   pgCode: string; // e.g., 'doku', 'xendit', 'finnet'
 
-  @Column()
+  @Column({name:'pg_name'})
   pgName: string;
 
   @Column({
@@ -52,7 +52,7 @@ export class PaymentGateway {
   credential: string;
 
   @Column({
-    name: 'credentialEncrypted',
+    name: 'credential_encrypted',
     type: 'text',
     nullable: true, // temporary during migration
   })
@@ -68,15 +68,15 @@ export class PaymentGateway {
   @Column()
   weight: number;
 
-  @Column()
+  @Column({name:'percentage_range'})
   percentageRange: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({name:'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({name:'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn()
+  @DeleteDateColumn({name:'deleted_at' })
   deletedAt?: Date;
 }

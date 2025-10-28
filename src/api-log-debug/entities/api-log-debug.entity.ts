@@ -32,20 +32,22 @@ export class ApiLogDebug {
   @Column({
     type: 'enum',
     enum: SIGNATURE_STATUS,
+    name:"signature_status"
   })
   signatureStatus: string;
 
   @Column({
     type: 'text',
+    name:"raw_payload"
   })
   rawPayload: string;
 
   /** VIRTUAL COLUMN */
   // orderId: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

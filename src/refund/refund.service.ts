@@ -9,6 +9,7 @@ import { Refund,RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
 import { RefundLog } from './entities/refund-log.entity';
+import { TicketingCallLog } from './entities/ticketing-call-log.entity';
 import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
@@ -40,6 +41,9 @@ export class RefundService {
 
         @InjectRepository(RefundLog)
         private repositoryRefundLog: Repository<RefundLog>,
+
+        @InjectRepository(TicketingCallLog)
+        private repositoryTicketingCallLog: Repository<TicketingCallLog>,
     
         private readonly configService: ConfigService,
 
@@ -122,9 +126,19 @@ export class RefundService {
                     method:"post",
                     data:payloadDetail
                 })
+
+                let ticketingCallPayload ={
+                    refundNumber:payload.reqData.invoice.orderId,
+                    payload:payload,
+                    response:dataDetail.data
+                
+                }
+                await this.repositoryTicketingCallLog.save(ticketingCallPayload);
+                
                 if(dataDetail.data.retCode!="0"){
                     throw new Error("Fail get Data from ticketing with message : "+dataDetail.data.retMsg);
                 }
+                
             }
             //end call ticketing
             //save ticketing Data

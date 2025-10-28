@@ -11,15 +11,15 @@ export class Configuration {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({name:'config_name'})
   configName: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text',name:'config_value' })
   configValue: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({name:'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({name:'updated_at' })
   updatedAt: Date;
 }
