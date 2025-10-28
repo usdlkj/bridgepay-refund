@@ -22,4 +22,8 @@ export default () => ({
       password: process.env.DB_PASSWORD,
     },
   ],
+
+  replication:{
+    defaultMode:process.env.DEFAULT_MODE || 'slave'
+  }
 });
