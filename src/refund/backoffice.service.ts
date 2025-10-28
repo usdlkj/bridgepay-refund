@@ -12,6 +12,7 @@ import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { RefundService } from './refund.service';
 import { privateDecrypt } from 'crypto';
+import { RefundDetail } from './entities/refund-detail.entity';
 const listType =['string',"json","number","date","enum","date"];
 const field=["refund_id","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
 
@@ -75,11 +76,18 @@ export class BackofficeService {
     }
 
     async view(id){
-        return await this.repositoryRefund.findOne({
-            where:{
-                id:id
-            }
-        });
+        const refund = await this.repositoryRefund.createQueryBuilder('refund')
+        .leftJoinAndMapOne(
+            'refund.refundDetail', 
+            RefundDetail, 
+            'detail', 
+            'detail.refund_mw_id = refund.id' // **NOTE:** Adjust this condition based on your actual FK structure
+        )
+        .leftJoinAndSelect('detail.ticketData','ticket')
+        .where('refund.id= :id', { id: id })
+        .getOne();
+
+        return refund;
     }
     async pgCallback(id){
         return await this.repositoryRefund.findOne({

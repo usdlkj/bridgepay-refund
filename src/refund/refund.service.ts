@@ -151,7 +151,7 @@ export class RefundService {
                     refundAmount:rowData.refundAmount,
                     refundId:rowData.refundId,
                     ticketOffice:rowData.ticketOffice,
-                    refundMwId:create.id.toString(),
+                    refundMwId:create.id,
                     createdAt:moment().toISOString(),
                     updatedAt:moment().toISOString()
 

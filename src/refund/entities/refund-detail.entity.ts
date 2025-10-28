@@ -6,8 +6,8 @@ export class RefundDetail {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'refund_mw_id', type: 'uuid', nullable: true })
-  refundMwId: string;
+  @Column({ name: 'refund_mw_id', nullable: true })
+  refundMwId: number;
 
   @Column({ nullable: true })
   email: string;
