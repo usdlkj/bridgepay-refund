@@ -101,6 +101,7 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
           return {
             type: 'postgres',
             replication: {
+              defaultMode:config.get('database.replication.defaultMode'),
               master: {
                 host: config.get('database.master.host'),
                 port: config.get<number>('database.master.port'),
