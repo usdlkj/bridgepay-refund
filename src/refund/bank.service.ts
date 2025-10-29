@@ -168,7 +168,8 @@ export class BankService {
                 method:"get",
                 response:iluma
             }
-            await this.repositoryCallLog.save(payloadLog);
+            let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
+            await this.repositoryCallLog.save(payloadLogSave);
             // console.log(iluma);
             if(iluma.status!=200){
                 throw new Error(iluma.msg)
@@ -213,8 +214,9 @@ export class BankService {
             }else{
 
                 payload["createdAt"]=moment().toISOString()
-                payload["updatedAt"]=moment().toISOString(),
-               result = await this.repositoryRefundBank.save(payload);
+                payload["updatedAt"]=moment().toISOString()
+                let payloadSave = await this.repositoryRefundBank.create(payload);
+               result = await this.repositoryRefundBank.save(payloadSave);
             }
             return {
                 status:200,

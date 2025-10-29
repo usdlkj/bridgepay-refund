@@ -1,14 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryColumn,BeforeInsert, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { ReportDataRow } from "./report-data-row.entity";
 export enum reportType{
     ILUMA="iluma",
     REFUND="refund"
 }
+import { ulid } from "ulid";
 
 @Entity('reports')
 export class Report {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+  id: string;
+
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
 
   @Column({ nullable: true })
   name: string;

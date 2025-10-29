@@ -109,7 +109,8 @@ private env: string;
                 updatedAt:moment().toISOString()
 
             }
-            bankDataRecord = await this.repositoryBankData.save(bankDataPayload);
+            let savePayload = await this.repositoryBankData.create(bankDataPayload);
+            bankDataRecord = await this.repositoryBankData.save(savePayload);
         }
 
         let payloadValidator ={
@@ -132,7 +133,8 @@ private env: string;
             method:"post",
             response:checkIluma.data
         }
-        await this.repositoryCallLog.save(payloadLog);
+        let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
+        await this.repositoryCallLog.save(payloadLogSave);
         
         if(checkIluma.data.status.toLowerCase()=="pending"){
             let ilumaPayload = {
@@ -143,8 +145,8 @@ private env: string;
                 updatedAt:moment().toISOString()
     
             }
-            
-            let ilumaReq = await this.repositoryCallback.save(ilumaPayload);
+            let ilumaPayloadSave = await this.repositoryCallback.create(ilumaPayload);
+            let ilumaReq = await this.repositoryCallback.save(ilumaPayloadSave);
             if(!ilumaReq){
                 result = {
                     retCode: -1,
@@ -193,7 +195,8 @@ private env: string;
                     method:"post",
                     response:check
                 }
-                await this.repositoryCallLog.save(payloadLog);
+                let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
+                await this.repositoryCallLog.save(payloadLogSave);
                 if(check.data.status.toLowerCase()=="completed" && check.data.result.is_found==true && check.data.result.is_virtual_account==false){
                     status="success"
                     accountName=check.data.result.account_holder_name;

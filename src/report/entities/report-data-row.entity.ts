@@ -1,16 +1,24 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
+  BeforeInsert,
   Column,
   ManyToOne,
   JoinColumn,
+
 } from 'typeorm';
 import { Report } from './report.entity';
+import { ulid } from 'ulid';
 
 @Entity('report_data_rows')
 export class ReportDataRow {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+    id: string;
+  
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
 
   @ManyToOne(() => Report, report => report.rows, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'report_id' })

@@ -1,10 +1,13 @@
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   UpdateDateColumn,
-} from 'typeorm';
+} from 'typeorm'
+import { ulid } from 'ulid';
+
 
 export enum SIGNATURE_STATUS {
   ACCEPTED = 'accepted',
@@ -13,8 +16,14 @@ export enum SIGNATURE_STATUS {
 
 @Entity('api_log_debugs')
 export class ApiLogDebug {
-  @PrimaryGeneratedColumn()
-  id: number;
+
+  @PrimaryColumn()
+  id: string;
+
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
 
   @Column()
   endpoint: string;

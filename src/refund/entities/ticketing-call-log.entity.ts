@@ -1,10 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import {ulid} from "ulid";
 
 
 @Entity('ticketing-call-logs')
 export class TicketingCallLog {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+    id: string;
+  
+    @BeforeInsert()
+    generateId() {
+      this.id=ulid()
+    }
 
   @Column({name:"refund_number"})
   refundNumber: string;

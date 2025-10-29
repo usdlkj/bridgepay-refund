@@ -17,7 +17,8 @@ export class ApiLogDebugService {
   }
 
   create(createApiLogDebugDto: CreateApiLogDebugDto) {
-    return this.repository.save(createApiLogDebugDto);
+    let payload = this.repository.create(createApiLogDebugDto);
+    return this.repository.save(payload);
   }
 
   findAll() {
@@ -38,15 +39,15 @@ export class ApiLogDebugService {
     };
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.repository.findOneBy({ id: id });
   }
 
-  update(id: number, updateApiLogDebugDto: UpdateApiLogDebugDto) {
+  update(id: string, updateApiLogDebugDto: UpdateApiLogDebugDto) {
     return this.repository.update(id, updateApiLogDebugDto);
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return this.repository.delete(id);
   }
 

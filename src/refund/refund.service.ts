@@ -107,7 +107,8 @@ export class RefundService {
                 updatedAt:moment().toISOString()
                 
             }
-            let create = await this.repositoryRefund.save(payloadSave);
+            let payloadSaveCreate = await this.repositoryRefund.create(payloadSave);
+            let create = await this.repositoryRefund.save(payloadSaveCreate);
             //call ticketing
             let reqData={
                 languageCode:"id_ID",
@@ -133,7 +134,8 @@ export class RefundService {
                     response:dataDetail.data
                 
                 }
-                await this.repositoryTicketingCallLog.save(ticketingCallPayload);
+                let ticketingCallPayloadSave = await this.repositoryTicketingCallLog.create(ticketingCallPayload);
+                await this.repositoryTicketingCallLog.save(ticketingCallPayloadSave);
                 
                 if(dataDetail.data.retCode!="0"){
                     throw new Error("Fail get Data from ticketing with message : "+dataDetail.data.retMsg);
@@ -156,7 +158,8 @@ export class RefundService {
                     updatedAt:moment().toISOString()
 
                 }
-                let saveDetail = await this.repositoryRefundDetail.save(detailTicketing)
+                let detailTicketingSave = await this.repositoryRefundDetail.create(detailTicketing);
+                let saveDetail = await this.repositoryRefundDetail.save(detailTicketingSave)
                 let listTicket=[];
                 for(let i=0;i<rowData.tickets.length;i++){
                     let dataTicket = rowData.tickets[i];
@@ -175,7 +178,8 @@ export class RefundService {
                         ticketNumber:dataTicket.ticketNumber,
                         refundDetailId:saveDetail
                     }
-                    let saveTicket = await this.repositoryRefundDetailTicket.save(ticket);
+                    let ticketSave = await this.repositoryRefundDetailTicket.create(ticket);
+                    let saveTicket = await this.repositoryRefundDetailTicket.save(ticketSave);
                     listTicket.push(saveTicket);
                 }
                 let updateDetail = await this.repositoryRefundDetail.update(saveDetail.id,{
@@ -265,7 +269,8 @@ export class RefundService {
                 msg:e.message,
                 notes:payload.reqData.invoice.orderId
             }
-            this.repositoryRefundLog.save(logPayload);
+            let logPayloadSave = await this.repositoryRefundLog.create(logPayload);
+            await this.repositoryRefundLog.save(logPayloadSave);
             let result = {
                 retCode: -1,
                 retMsg: e.message,
