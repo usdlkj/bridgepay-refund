@@ -1,4 +1,4 @@
-import { ConfigService } from "@nestjs/config";
+import { ConfigService } from '@nestjs/config';
 
 export function getEnv(configService: ConfigService): string {
   return configService.get<string>('nodeEnv') || 'development';

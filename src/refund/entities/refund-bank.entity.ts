@@ -1,17 +1,23 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum BankStatus {
-  ENABLE = "enable",
-  DISABLE = "disable"
+  ENABLE = 'enable',
+  DISABLE = 'disable',
 }
 
 export class SearchBankStatus {
-  get(search){
-    let data=[]
-    data["enable"]=BankStatus.ENABLE
-    data["disable"]=BankStatus.DISABLE
-    
-    return data[search]
+  get(search) {
+    const data = [];
+    data['enable'] = BankStatus.ENABLE;
+    data['disable'] = BankStatus.DISABLE;
+
+    return data[search];
   }
 }
 

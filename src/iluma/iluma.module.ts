@@ -9,9 +9,12 @@ import { Helper } from 'src/utils/helper';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([IlumaCallLog, IlumaCallback, RefundBank]),BrokerModule],
-  providers: [IlumaService,Helper],
+  imports: [
+    TypeOrmModule.forFeature([IlumaCallLog, IlumaCallback, RefundBank]),
+    BrokerModule,
+  ],
+  providers: [IlumaService, Helper],
   controllers: [IlumaController],
-  exports: [IlumaService]
+  exports: [IlumaService],
 })
 export class IlumaModule {}

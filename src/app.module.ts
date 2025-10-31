@@ -1,6 +1,6 @@
 import { ReportModule } from './report/report.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { Module ,MiddlewareConsumer,RequestMethod } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -16,7 +16,6 @@ import { RefundModule } from './refund/refund.module';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import rabbitmqConfig from './config/rabbitmq.config';
-import refundConfig from './config/refund.config';
 import { RefundMiddleware } from './refund/refund.middleware';
 import { RefundController } from './refund/refund.controller';
 import { IlumaController } from './iluma/iluma.controller';
@@ -36,24 +35,27 @@ import { IlumaController } from './iluma/iluma.controller';
         return {
           pinoHttp: {
             customLogLevel: (req, res, err) => {
-              const excludedRoutes = ['/health', '/metrics', '/health/liveness'];
+              const excludedRoutes = [
+                '/health',
+                '/metrics',
+                '/health/liveness',
+              ];
               if (excludedRoutes.includes(req.url)) return 'silent';
               return err || res.statusCode >= 500 ? 'error' : 'info';
             },
-            transport:
-              isDevOrTest(env)
-                ? logsFolder !== ''
-                  ? {
+            transport: isDevOrTest(env)
+              ? logsFolder !== ''
+                ? {
                     target: 'pino-rotate',
                     options: {
                       file: `${logsFolder}/bridgepay-core-%YYYY-MM-DD%.log`,
                       limit: '7d',
                     },
                   }
-                  : { target: 'pino-pretty', options: { singleLine: true }}
-                : undefined,
-          }
-        }
+                : { target: 'pino-pretty', options: { singleLine: true } }
+              : undefined,
+          },
+        };
       },
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
@@ -68,22 +70,37 @@ import { IlumaController } from './iluma/iluma.controller';
         const isEnabled = config.get('redisUrl') !== '';
         if (isEnabled) {
           const keyvRedis = new KeyvRedis(config.get('redisUrl'));
-          const keyv = new Keyv({ store: keyvRedis, namespace: 'bridgepay', ttl: 300000 });
+          const keyv = new Keyv({
+            store: keyvRedis,
+            namespace: 'bridgepay',
+            ttl: 300000,
+          });
           // Health check at startup
           try {
             await keyv.set('init-check', 'ok', 1000);
             console.log('[Redis] Connected and operational');
             return { stores: [keyv] };
           } catch (err) {
-            console.warn('[Redis] Connection failed at startup, falling back to memory:', err.message);
+            console.warn(
+              '[Redis] Connection failed at startup, falling back to memory:',
+              err.message,
+            );
             return {
               stores: [
-                new Keyv({ store: new CacheableMemory({ ttl: 300000, lruSize: 5000 }) }),
+                new Keyv({
+                  store: new CacheableMemory({ ttl: 300000, lruSize: 5000 }),
+                }),
               ],
             };
           }
         } else {
-          return { stores: [new Keyv({ store: new CacheableMemory({ ttl: 5000, lruSize: 5000 })})]};
+          return {
+            stores: [
+              new Keyv({
+                store: new CacheableMemory({ ttl: 5000, lruSize: 5000 }),
+              }),
+            ],
+          };
         }
       },
     }),
@@ -91,7 +108,9 @@ import { IlumaController } from './iluma/iluma.controller';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const isProd = ['staging', 'production'].includes(config.get<string>('nodeEnv') || '');
+        const isProd = ['staging', 'production'].includes(
+          config.get<string>('nodeEnv') || '',
+        );
 
         if (isProd) {
           return {
@@ -136,8 +155,11 @@ export class AppModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(RefundMiddleware)
-      .exclude({path:'/api/v2/bankCodes',method:RequestMethod.GET})
-      .exclude({path:'/api/v2/webhook/iluma/bank-validator',method:RequestMethod.POST})
-      .forRoutes(RefundController,IlumaController); // Applies middleware to all routes in PostsController
+      .exclude({ path: '/api/v2/bankCodes', method: RequestMethod.GET })
+      .exclude({
+        path: '/api/v2/webhook/iluma/bank-validator',
+        method: RequestMethod.POST,
+      })
+      .forRoutes(RefundController, IlumaController); // Applies middleware to all routes in PostsController
   }
 }

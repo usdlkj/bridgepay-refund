@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
@@ -19,7 +18,7 @@ async function bootstrap() {
       queueOptions: { durable: true },
     },
   });
-  
+
   app.useLogger(logger);
   // Start both the microservice listener and the HTTP server.
   await app.startAllMicroservices();

@@ -1,8 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
-import { ReportDataRow } from "./report-data-row.entity";
-export enum reportType{
-    ILUMA="iluma",
-    REFUND="refund"
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { ReportDataRow } from './report-data-row.entity';
+export enum reportType {
+  ILUMA = 'iluma',
+  REFUND = 'refund',
 }
 
 @Entity('reports')
@@ -36,7 +43,7 @@ export class Report {
   })
   reportStatus: 'process' | 'completed';
 
-  @OneToMany(() => ReportDataRow, row => row.report, { cascade: true })
+  @OneToMany(() => ReportDataRow, (row) => row.report, { cascade: true })
   rows: ReportDataRow[];
 
   @CreateDateColumn({ name: 'created_at' })

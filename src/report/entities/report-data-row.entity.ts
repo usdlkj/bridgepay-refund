@@ -12,7 +12,7 @@ export class ReportDataRow {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Report, report => report.rows, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Report, (report) => report.rows, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'report_id' })
   report: Report;
 

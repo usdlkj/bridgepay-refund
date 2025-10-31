@@ -1,12 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
-import { RefundDetail } from "./refund-detail.entity";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { RefundDetail } from './refund-detail.entity';
 
 @Entity('refund_detail_tickets')
 export class RefundDetailTicket {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => RefundDetail, detail => detail.ticketData)
+  @ManyToOne(() => RefundDetail, (detail) => detail.ticketData)
   @JoinColumn({ name: 'refund_detail_id' })
   refundDetail: RefundDetail;
 

@@ -1,5 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
-import { RefundDetailTicket } from "./refund-detail-ticket.entity";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { RefundDetailTicket } from './refund-detail-ticket.entity';
 
 @Entity('refund_details')
 export class RefundDetail {
@@ -27,7 +34,9 @@ export class RefundDetail {
   @Column({ name: 'ticket_office', nullable: true })
   ticketOffice: string;
 
-  @OneToMany(() => RefundDetailTicket, ticket => ticket.refundDetail, { cascade: true })
+  @OneToMany(() => RefundDetailTicket, (ticket) => ticket.refundDetail, {
+    cascade: true,
+  })
   ticketData: RefundDetailTicket[];
 
   @CreateDateColumn({ name: 'created_at' })
