@@ -1,12 +1,18 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
 import { RefundDetailTicket } from "./refund-detail-ticket.entity";
+import { ulid } from "ulid";
 
 @Entity('refund_details')
 export class RefundDetail {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+    id: string;
+  
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
 
-  @Column({ name: 'refund_mw_id', type: 'uuid', nullable: true })
+  @Column({ name: 'refund_id', nullable: true })
   refundMwId: string;
 
   @Column({ nullable: true })
@@ -18,7 +24,7 @@ export class RefundDetail {
   @Column({ nullable: true })
   reason: string;
 
-  @Column({ name: 'refund_id', nullable: true })
+  @Column({ name: 'refund_ga_number', nullable: true })
   refundId: string;
 
   @Column({ name: 'refund_amount', type: 'numeric', nullable: true })

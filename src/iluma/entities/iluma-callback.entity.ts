@@ -1,9 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { ulid } from 'ulid';
 
 @Entity('iluma_callbacks')
 export class IlumaCallback {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+  id: string;
+
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
 
   @Column({ name: 'callback_type', nullable: true })
   callbackType: string;

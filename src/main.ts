@@ -11,18 +11,18 @@ async function bootstrap() {
   const logger = app.get(Logger);
   // Attach the microservice listener to the main application instance.
   // This is the key change.
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: configService.get('rabbitmq.url'),
-      queue: configService.get('rabbitmq.refundQueue'),
-      queueOptions: { durable: true },
-    },
-  });
+  // app.connectMicroservice<MicroserviceOptions>({
+  //   transport: Transport.RMQ,
+  //   options: {
+  //     urls: configService.get('rabbitmq.url'),
+  //     queue: configService.get('rabbitmq.refundQueue'),
+  //     queueOptions: { durable: true },
+  //   },
+  // });
   
-  app.useLogger(logger);
+  // app.useLogger(logger);
   // Start both the microservice listener and the HTTP server.
-  await app.startAllMicroservices();
+  // await app.startAllMicroservices();
   await app.listen(configService.get('port'));
 }
 bootstrap();

@@ -6,6 +6,7 @@ import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import { RefundBank,SearchBankStatus } from 'src/refund/entities/refund-bank.entity';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not } from 'typeorm';
@@ -29,6 +30,8 @@ export class BankService {
         private repositoryCallLog: Repository<IlumaCallLog>,
     
         private readonly configService: ConfigService,
+
+        private readonly yggdrasilService: YggdrasilService
     
         ) {
         this.env = getEnv(this.configService);
@@ -115,7 +118,7 @@ export class BankService {
                 func:"bank-list",
                 token:credential.secretKey
             }
-            let xendit = await this.coreService.send({cmd:'refund-core-service'},payload).toPromise();
+            let xendit = await this.yggdrasilService.refund(payload)
             if(xendit.status!=200){
                 throw new Error(xendit.data)
             }else{
@@ -158,14 +161,15 @@ export class BankService {
                 func:"bank-list",
                 credential:this.configService.get('ilumaToken')
             }
-            let iluma = await this.coreService.send({cmd:'refund-core-service'},payload).toPromise();
+            let iluma = await this.yggdrasilService.refund(payload)
             let payloadLog = {
                 url:"https://api.iluma.ai/bank/available_bank_codes",
                 payload:null,
                 method:"get",
                 response:iluma
             }
-            await this.repositoryCallLog.save(payloadLog);
+            let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
+            await this.repositoryCallLog.save(payloadLogSave);
             // console.log(iluma);
             if(iluma.status!=200){
                 throw new Error(iluma.msg)
@@ -210,8 +214,9 @@ export class BankService {
             }else{
 
                 payload["createdAt"]=moment().toISOString()
-                payload["updatedAt"]=moment().toISOString(),
-               result = await this.repositoryRefundBank.save(payload);
+                payload["updatedAt"]=moment().toISOString()
+                let payloadSave = await this.repositoryRefundBank.create(payload);
+               result = await this.repositoryRefundBank.save(payloadSave);
             }
             return {
                 status:200,

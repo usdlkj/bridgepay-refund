@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { RefundDetail } from "./refund-detail.entity";
+import { ulid } from "ulid";
 
 export enum RefundStatus {
   RBDAPPROVAL = 'rbdApproval',
@@ -36,10 +37,15 @@ export class SearchRefundStatus {
 
 @Entity('refunds')
 export class Refund {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+  id: string;
 
-  @Column({ name: 'refund_id', nullable: true })
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
+
+  @Column({ name: 'refund_ga_number', nullable: true })
   refundId: string;
 
   @ManyToOne(() => RefundDetail)

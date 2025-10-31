@@ -20,12 +20,16 @@ import refundConfig from './config/refund.config';
 import { RefundMiddleware } from './refund/refund.middleware';
 import { RefundController } from './refund/refund.controller';
 import { IlumaController } from './iluma/iluma.controller';
+import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
+import { ConfigurationModule } from './configuration/configuration.module';
+import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, rabbitmqConfig],
+      load: [appConfig, databaseConfig, rabbitmqConfig,refundConfig],
     }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
@@ -97,6 +101,7 @@ import { IlumaController } from './iluma/iluma.controller';
           return {
             type: 'postgres',
             replication: {
+              defaultMode:config.get('database.replication.defaultMode'),
               master: {
                 host: config.get('database.master.host'),
                 port: config.get<number>('database.master.port'),
@@ -128,6 +133,9 @@ import { IlumaController } from './iluma/iluma.controller';
     IlumaModule,
     RefundModule,
     ReportModule,
+    PaymentGatewayModule,
+    ConfigurationModule,
+    ApiLogDebugModule,
   ],
   controllers: [AppController],
   providers: [AppService],
@@ -138,6 +146,7 @@ export class AppModule {
       .apply(RefundMiddleware)
       .exclude({path:'/api/v2/bankCodes',method:RequestMethod.GET})
       .exclude({path:'/api/v2/webhook/iluma/bank-validator',method:RequestMethod.POST})
+      .exclude({path:'/api/v2/webhook/xendit/disbursement',method:RequestMethod.POST})
       .forRoutes(RefundController,IlumaController); // Applies middleware to all routes in PostsController
   }
 }

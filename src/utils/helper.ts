@@ -5,9 +5,6 @@ import * as crypto from 'crypto'
 import * as refundConfig from 'src/config/refund.config'
 let refundEnv = refundConfig.default()
 
-
-
-
 export class Helper {
    async dtoToJson(data){
      let stringify = JSON.stringify(data);
@@ -59,7 +56,6 @@ export class Helper {
    }
 
    async sign(msg){
-    console.log(refundEnv);
     let filename = refundEnv.refund.keyFilePrivate || "pgmid";
     let pkey = fs.readFileSync(path.join(__dirname, "../../key/"+filename), {
         encoding: "utf8",

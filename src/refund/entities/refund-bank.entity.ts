@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
-
+import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { ulid } from "ulid";
 export enum BankStatus {
   ENABLE = "enable",
   DISABLE = "disable"
@@ -17,8 +17,13 @@ export class SearchBankStatus {
 
 @Entity('refund_banks')
 export class RefundBank {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryColumn()
+  id: string;
+
+  @BeforeInsert()
+  generateId() {
+    this.id=ulid()
+  }
 
   @Column({ name: 'bank_name' })
   bankName: string;

@@ -81,7 +81,8 @@ export class ReportService {
                 createdAt:moment().toISOString(),
                 updatedAt:moment().toISOString()
             }
-            let save = await this.repositoryReport.save(payload);
+            let payloadSave = await this.repositoryReport.create(payload);
+            let save = await this.repositoryReport.save(payloadSave);
             if(type=="refund"){
               this.#refundReportGenerate(save)
             }else{
@@ -162,7 +163,8 @@ export class ReportService {
                         ticketType:"-",
                         originalTicketPrice:ticketData!=null?ticketData.purchasePrice:"-"
                     }
-                    await this.repositoryReportDataRow.save(row)
+                    let rowSave = this.repositoryReportDataRow.create(row);
+                    await this.repositoryReportDataRow.save(rowSave)
                     refundData.push(row)
                     no++;
                 }
@@ -211,7 +213,7 @@ export class ReportService {
 
     async downloadExcel(id: string) {
         try {
-        const report = await this.repositoryReport.findOneBy({ id: parseInt(id) });
+        const report = await this.repositoryReport.findOneBy({ id: id });
         if (!report) {
             throw new Error("Report not found");
         }

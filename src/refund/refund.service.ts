@@ -1,4 +1,4 @@
-import { Injectable,Inject } from '@nestjs/common';
+import { Injectable,Inject,HttpException,HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { BrokerModule } from 'src/broker/broker.module';
 import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
@@ -8,6 +8,11 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { Refund,RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
+import { RefundLog } from './entities/refund-log.entity';
+import { TicketingCallLog } from './entities/ticketing-call-log.entity';
+import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
+import { ConfigurationService } from 'src/configuration/configuration.service';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import {  Repository,IsNull, Not } from 'typeorm';
@@ -30,10 +35,23 @@ export class RefundService {
         @InjectRepository(RefundDetail)
         private repositoryRefundDetail: Repository<RefundDetail>,
 
+
         @InjectRepository(RefundDetailTicket)
         private repositoryRefundDetailTicket: Repository<RefundDetailTicket>,
+
+        @InjectRepository(RefundLog)
+        private repositoryRefundLog: Repository<RefundLog>,
+
+        @InjectRepository(TicketingCallLog)
+        private repositoryTicketingCallLog: Repository<TicketingCallLog>,
     
         private readonly configService: ConfigService,
+
+        private configurationService: ConfigurationService,
+        
+        private yggdrasilService : YggdrasilService,
+        
+        private paymentGatewayService: PaymentGatewayService,
     
       ) {
         this.env = getEnv(this.configService);
@@ -49,6 +67,7 @@ export class RefundService {
             }else{
             ticketingCall=1;
             }
+            console.log("sampe sini");
             let credential = await this.#getXenditToken();
             let check = await this.repositoryRefund.findOne({
                 where:{
@@ -88,7 +107,8 @@ export class RefundService {
                 updatedAt:moment().toISOString()
                 
             }
-            let create = await this.repositoryRefund.save(payloadSave);
+            let payloadSaveCreate = await this.repositoryRefund.create(payloadSave);
+            let create = await this.repositoryRefund.save(payloadSaveCreate);
             //call ticketing
             let reqData={
                 languageCode:"id_ID",
@@ -103,13 +123,24 @@ export class RefundService {
             if(ticketingCall==1){
 
                 dataDetail = await axios({
-                    url:process.env.TICKETING_API_BASE_URL+"/payplat/bank/queryRefundTicketInfo",
+                    url:await this.configService.get('ticketingApiBaseUrl')+"/payplat/bank/queryRefundTicketInfo",
                     method:"post",
                     data:payloadDetail
                 })
+
+                let ticketingCallPayload ={
+                    refundNumber:payload.reqData.invoice.orderId,
+                    payload:payload,
+                    response:dataDetail.data
+                
+                }
+                let ticketingCallPayloadSave = await this.repositoryTicketingCallLog.create(ticketingCallPayload);
+                await this.repositoryTicketingCallLog.save(ticketingCallPayloadSave);
+                
                 if(dataDetail.data.retCode!="0"){
                     throw new Error("Fail get Data from ticketing with message : "+dataDetail.data.retMsg);
                 }
+                
             }
             //end call ticketing
             //save ticketing Data
@@ -122,12 +153,13 @@ export class RefundService {
                     refundAmount:rowData.refundAmount,
                     refundId:rowData.refundId,
                     ticketOffice:rowData.ticketOffice,
-                    refundMwId:create.id.toString(),
+                    refundMwId:create.id,
                     createdAt:moment().toISOString(),
                     updatedAt:moment().toISOString()
 
                 }
-                let saveDetail = await this.repositoryRefundDetail.save(detailTicketing)
+                let detailTicketingSave = await this.repositoryRefundDetail.create(detailTicketing);
+                let saveDetail = await this.repositoryRefundDetail.save(detailTicketingSave)
                 let listTicket=[];
                 for(let i=0;i<rowData.tickets.length;i++){
                     let dataTicket = rowData.tickets[i];
@@ -146,7 +178,8 @@ export class RefundService {
                         ticketNumber:dataTicket.ticketNumber,
                         refundDetailId:saveDetail
                     }
-                    let saveTicket = await this.repositoryRefundDetailTicket.save(ticket);
+                    let ticketSave = await this.repositoryRefundDetailTicket.create(ticket);
+                    let saveTicket = await this.repositoryRefundDetailTicket.save(ticketSave);
                     listTicket.push(saveTicket);
                 }
                 let updateDetail = await this.repositoryRefundDetail.update(saveDetail.id,{
@@ -166,12 +199,10 @@ export class RefundService {
 
             if(create){
                 let refundDelay=0;
-                let whereConfig = {
-                    configName: "REFUND_DELAY"
-                }
-                let delayConfig = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
+                
+                let delayConfig = await this.configurationService.findByConfigName("REFUND_DELAY");
                 if(delayConfig){
-                    refundDelay=delayConfig.configValue
+                    refundDelay=parseInt(delayConfig.configValue)
                 }
                 if(refundDelay<=0){
                     let refund = await this.repositoryRefund.findOne({
@@ -193,7 +224,7 @@ export class RefundService {
                         token:credential.secretKey
                     }
 
-                    let xendit = await this.coreService.send({cmd:"refund-core-service"},payloadDisbursement).toPromise();
+                    let xendit = await this.yggdrasilService.refund(payloadDisbursement);
                     if(xendit.status==200){
                     result ={
                         status:200,
@@ -238,11 +269,13 @@ export class RefundService {
                 msg:e.message,
                 notes:payload.reqData.invoice.orderId
             }
+            let logPayloadSave = await this.repositoryRefundLog.create(logPayload);
+            await this.repositoryRefundLog.save(logPayloadSave);
             let result = {
                 retCode: -1,
                 retMsg: e.message,
             }
-            return result;
+            throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         
       }
@@ -268,7 +301,7 @@ export class RefundService {
                 func:"get-balance",
                 token:credential.secretKey
             }
-            let balance = await this.coreService.send({cmd:'refund-core-service'},balancePayload).toPromise();
+            let balance = await this.yggdrasilService.refund(balancePayload)
             let invoice = {}
             
             //create payload
@@ -308,7 +341,7 @@ export class RefundService {
                 retCode: -1,
                 retMsg: e.message,
             }
-            return result;
+            throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
       }
 
@@ -339,7 +372,7 @@ export class RefundService {
                 retCode: -1,
                 retMsg: e.message,
             }
-            return result;
+            throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
         }
       }
 
@@ -348,7 +381,7 @@ export class RefundService {
       }  
 
       async #getXenditToken(){
-        const pgData = await this.coreService.send({ cmd: 'get-payment-gateway-like-name' },{pgName:'xendit'}).toPromise();
+        const pgData = await this.paymentGatewayService.findOneLikeName({pgName:'xendit'})
         const credentialData = JSON.parse(pgData.credential);
         // console.log(credentialData);
         const credential = credentialData[await this.configService.get('nodeEnv')];

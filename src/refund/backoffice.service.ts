@@ -8,10 +8,16 @@ import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not } from 'typeorm';
 import { Refund,RefundStatus,SearchRefundStatus } from './entities/refund.entity';
+import { ConfigurationService } from 'src/configuration/configuration.service';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { RefundService } from './refund.service';
 import { privateDecrypt } from 'crypto';
+import { RefundDetail } from './entities/refund-detail.entity';
+import { RefundLog } from './entities/refund-log.entity';
 const listType =['string',"json","number","date","enum","date"];
-const field=["refund_id","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
+const field=["refund_ga_number","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
+const listTypeLog =['string',"string","string","string","date"];
+const fieldLog=["type","location","msg","notes",'created_at']
 
 @Injectable()
 export class BackofficeService {
@@ -23,10 +29,15 @@ export class BackofficeService {
 
         @InjectRepository(Refund)
         private repositoryRefund: Repository<Refund>,
+
+        @InjectRepository(RefundLog)
+        private repositoryRefundLog: Repository<RefundLog>,
     
         private readonly configService: ConfigService,
         private readonly refundService:RefundService,
-        private readonly searchRefundStatus:SearchRefundStatus
+        private readonly searchRefundStatus:SearchRefundStatus,
+        private readonly configurationService:ConfigurationService,
+        private readonly yggdrasilService : YggdrasilService
     
         ) {
         this.env = getEnv(this.configService);
@@ -71,11 +82,18 @@ export class BackofficeService {
     }
 
     async view(id){
-        return await this.repositoryRefund.findOne({
-            where:{
-                id:id
-            }
-        });
+        const refund = await this.repositoryRefund.createQueryBuilder('refund')
+        .leftJoinAndMapOne(
+            'refund.refundDetail', 
+            RefundDetail, 
+            'detail', 
+            'detail.refund_mw_id = refund.id' // **NOTE:** Adjust this condition based on your actual FK structure
+        )
+        .leftJoinAndSelect('detail.ticketData','ticket')
+        .where('refund.id= :id', { id: id })
+        .getOne();
+
+        return refund;
     }
     async pgCallback(id){
         return await this.repositoryRefund.findOne({
@@ -105,13 +123,11 @@ export class BackofficeService {
 
     async retryDisbursement(refundId){
         try{
-            let whereConfig = {
-                configName: "REFUND_TRY_COUNT"
-            }
-            let tryCount = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
+
+            let tryCount = await this.configurationService.findByConfigName("REFUND_TRY_COUNT")
             let config = 1;
             if(tryCount){
-                config=tryCount.configValue;
+                config=parseInt(tryCount.configValue);
             }
             let failAttempt = config ||  1
             let _where = {
@@ -156,7 +172,7 @@ export class BackofficeService {
                 token:credential.secretKey
             }
 
-            let xendit = await this.coreService.send({cmd:"refund-core-service"},payloadDisbursement).toPromise();
+            let xendit = await this.yggdrasilService.refund(payloadDisbursement)
             if(xendit.status==200){
                 result ={
                     status:200,
@@ -171,6 +187,43 @@ export class BackofficeService {
         }catch(e){
             console.log(e);
             throw new Error(e.message)
+        }
+    }
+
+    async refundLog(columns){
+        try{
+            let qb = await this.repositoryRefundLog.createQueryBuilder('refundLog');
+            if(columns){
+                for(let row of columns){
+                    let search = row.search.value;
+                    let index = row.data;
+                    if(search!=''){
+                        if(listTypeLog[index]=="string"){
+                            qb.andWhere(`"${fieldLog[index]}" iLike '%${search}%'`)
+                        }else if(listTypeLog[index]=="fixed"){
+                            qb.andWhere(`"${fieldLog[index]}" = '${search}'`)
+                        }else if(listTypeLog[index]=='number'){
+                            qb.andWhere(`"${fieldLog[index]}" = '${search}'`)
+                        }else if(listTypeLog[index]=='enum'){
+                            let statusSearch = await this.searchRefundStatus.get(search.toLowerCase());
+                            qb.andWhere(`"${fieldLog[index]}" = '${statusSearch}'`)
+                        }else if(listTypeLog[index]=='json'){
+                            qb.andWhere(`${fieldLog[index]} = '${search}'`)
+                        }else{
+                            let date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
+                            let startDate = date.toISOString();
+                            let endDate = date.add(1, 'day').toISOString();
+                            qb.andWhere(`"${fieldLog[index]}" BETWEEN '${startDate}' AND '${endDate}'`)
+                        }
+
+                    }
+                }
+            } 
+            let data = await qb.getMany();
+            return data;
+    
+        }catch(e){
+            throw new HttpException({status:500,message:e.message}, HttpStatus.INTERNAL_SERVER_ERROR) 
         }
     }
 

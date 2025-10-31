@@ -8,6 +8,9 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { Refund,RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
+import { ConfigurationService } from 'src/configuration/configuration.service';
+import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
+import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not,In } from 'typeorm';
@@ -34,6 +37,12 @@ export class WebhookService {
         private repositoryRefundDetailTicket: Repository<RefundDetailTicket>,
     
         private readonly configService: ConfigService,
+
+        private configurationService: ConfigurationService,
+        
+        private yggdrasilService : YggdrasilService,
+        
+        private paymentGatewayService:PaymentGatewayService
     
       ) {
         this.env = getEnv(this.configService);
@@ -75,7 +84,7 @@ export class WebhookService {
                         func:"get-balance",
                         token:credential.secretKey
                     }
-                    let balance = await this.coreService.send({cmd:'refund-core-service'},balancePayload).toPromise();
+                    let balance = await this.yggdrasilService.refund(balancePayload)
                     //end get balance data
 
                     if(data.status.toLowerCase()=="completed"){
@@ -148,14 +157,10 @@ export class WebhookService {
                             }
                             await this.#notifTicketing(check.refundData,tickectingPayload,check.id,check.notifLog,"fail",pgCallback);
                         }else{
-                            let whereConfig = {
-                                configName: "REFUND_TRY_COUNT"
-                            }
-                            let tryCount = await this.coreService.send({cmd:'get-config-data'},whereConfig).toPromise();
-                            console.log(tryCount);
+                            let tryCount = await this.configurationService.findByConfigName("REFUND_TRY_COUNT")
                             let config = 1;
                             if(tryCount){
-                                config=tryCount.configValue;
+                                config=parseInt(tryCount.configValue);
                             }
                             let failAttempt = config ||  1
                             let retryAttempt= check.retryAttempt?check.retryAttempt.length:0;
@@ -192,13 +197,11 @@ export class WebhookService {
                                 }
                                 await this.#notifTicketing(check.refundData,tickectingPayload,check.id,check.notifLog,"fail",pgCallback);
                             }else{
-                                let whereConfigTryPeriod = {
-                                    configName: "⁠REFUND_TRY_TIME_PERIOD"
-                                }
-                                let tyrPeriod = await this.coreService.send({cmd:'get-config-data'},whereConfigTryPeriod).toPromise();
+
+                                let tyrPeriod = await this.configurationService.findByConfigName("⁠REFUND_TRY_TIME_PERIOD")
                                 let configTryPeriod = 10;
                                 if(tyrPeriod){
-                                    configTryPeriod=tyrPeriod.configValue;
+                                    configTryPeriod=parseInt(tyrPeriod.configValue);
                                 }
 
                                 if(configTryPeriod< 10){
@@ -229,7 +232,8 @@ export class WebhookService {
       }
 
       async #getXenditToken(){
-        const pgData = await this.coreService.send({ cmd: 'get-payment-gateway-like-name' },{pgName:'xendit'}).toPromise();
+
+        const pgData = await this.paymentGatewayService.findOneLikeName({pgName:'xendit'})
         const credentialData = JSON.parse(pgData.credential);
         // console.log(credentialData);
         const credential = credentialData[await this.configService.get('nodeEnv')];
