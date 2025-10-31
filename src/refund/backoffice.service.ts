@@ -15,7 +15,7 @@ import { privateDecrypt } from 'crypto';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundLog } from './entities/refund-log.entity';
 const listType =['string',"json","number","date","enum","date"];
-const field=["refund_id","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
+const field=["refund_ga_number","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
 const listTypeLog =['string',"string","string","string","date"];
 const fieldLog=["type","location","msg","notes",'created_at']
 
