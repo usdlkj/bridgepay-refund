@@ -13,8 +13,11 @@ import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { RefundService } from './refund.service';
 import { privateDecrypt } from 'crypto';
 import { RefundDetail } from './entities/refund-detail.entity';
+import { RefundLog } from './entities/refund-log.entity';
 const listType =['string',"json","number","date","enum","date"];
 const field=["refund_id","refund_data->'reqData'->'account'->>'name'","refund_amount","created_at",'refund_status','refund_date']
+const listTypeLog =['string',"string","string","string","date"];
+const fieldLog=["type","location","msg","notes",'created_at']
 
 @Injectable()
 export class BackofficeService {
@@ -26,6 +29,9 @@ export class BackofficeService {
 
         @InjectRepository(Refund)
         private repositoryRefund: Repository<Refund>,
+
+        @InjectRepository(RefundLog)
+        private repositoryRefundLog: Repository<RefundLog>,
     
         private readonly configService: ConfigService,
         private readonly refundService:RefundService,
@@ -181,6 +187,43 @@ export class BackofficeService {
         }catch(e){
             console.log(e);
             throw new Error(e.message)
+        }
+    }
+
+    async refundLog(columns){
+        try{
+            let qb = await this.repositoryRefundLog.createQueryBuilder('refundLog');
+            if(columns){
+                for(let row of columns){
+                    let search = row.search.value;
+                    let index = row.data;
+                    if(search!=''){
+                        if(listTypeLog[index]=="string"){
+                            qb.andWhere(`"${fieldLog[index]}" iLike '%${search}%'`)
+                        }else if(listTypeLog[index]=="fixed"){
+                            qb.andWhere(`"${fieldLog[index]}" = '${search}'`)
+                        }else if(listTypeLog[index]=='number'){
+                            qb.andWhere(`"${fieldLog[index]}" = '${search}'`)
+                        }else if(listTypeLog[index]=='enum'){
+                            let statusSearch = await this.searchRefundStatus.get(search.toLowerCase());
+                            qb.andWhere(`"${fieldLog[index]}" = '${statusSearch}'`)
+                        }else if(listTypeLog[index]=='json'){
+                            qb.andWhere(`${fieldLog[index]} = '${search}'`)
+                        }else{
+                            let date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
+                            let startDate = date.toISOString();
+                            let endDate = date.add(1, 'day').toISOString();
+                            qb.andWhere(`"${fieldLog[index]}" BETWEEN '${startDate}' AND '${endDate}'`)
+                        }
+
+                    }
+                }
+            } 
+            let data = await qb.getMany();
+            return data;
+    
+        }catch(e){
+            throw new HttpException({status:500,message:e.message}, HttpStatus.INTERNAL_SERVER_ERROR) 
         }
     }
 

@@ -13,6 +13,10 @@ export class BackofficeController {
     async refundList(@Body('query') query){
         return this.backofficeService.list(query)
     }
+    @Get('/log')
+    async refundLog(@Body('query') query){
+        return this.backofficeService.refundLog(query)
+    }
     @Get('/refundDetail/:id')
     async refundDetail(@Param("id") id:string){
         return this.backofficeService.refundDetail(id)
