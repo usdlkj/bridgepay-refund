@@ -17,7 +17,7 @@ export class ApiLogDebugService {
   }
 
   create(createApiLogDebugDto: CreateApiLogDebugDto) {
-    let payload = this.repository.create(createApiLogDebugDto);
+    const payload = this.repository.create(createApiLogDebugDto);
     return this.repository.save(payload);
   }
 

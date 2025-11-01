@@ -1,6 +1,12 @@
-import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { ulid } from "ulid";
-
+import {
+  Entity,
+  PrimaryColumn,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { ulid } from 'ulid';
 
 @Entity('refund_logs')
 export class RefundLog {
@@ -9,27 +15,26 @@ export class RefundLog {
 
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
   @Column({
-    name:'type',
-    enum:['api',"general","info"],
+    name: 'type',
+    enum: ['api', 'general', 'info'],
   })
   type: string;
 
   @Column()
   location: string;
 
-  @Column({type:"text"})
+  @Column({ type: 'text' })
   detail: string;
-  
-  @Column({type:"text"})
+
+  @Column({ type: 'text' })
   msg: string;
 
-  @Column({type:"text"})
+  @Column({ type: 'text' })
   notes: string;
-
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

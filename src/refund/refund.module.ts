@@ -1,11 +1,11 @@
-import { Module  } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { RefundService } from './refund.service';
 import { RefundController } from './refund.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Refund,SearchRefundStatus } from './entities/refund.entity';
+import { Refund, SearchRefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
-import { RefundBank,SearchBankStatus } from './entities/refund-bank.entity';
+import { RefundBank, SearchBankStatus } from './entities/refund-bank.entity';
 import { BrokerModule } from 'src/broker/broker.module';
 import { Helper } from 'src/utils/helper';
 import { BackofficeService } from './backoffice.service';
@@ -23,11 +23,39 @@ import { ApiLogDebugModule } from 'src/api-log-debug/api-log-debug.module';
 import { RefundLog } from './entities/refund-log.entity';
 import { TicketingCallLog } from './entities/ticketing-call-log.entity';
 
-
 @Module({
-  imports: [TypeOrmModule.forFeature([Refund, RefundDetail, RefundDetailTicket, RefundBank,IlumaCallLog,RefundLog,TicketingCallLog]),BrokerModule,ConfigurationModule,PaymentGatewayModule,YggdrasilModule,ApiLogDebugModule],
-  providers: [RefundService,Helper, BackofficeService, WebhookService, CronService, BankService,SearchBankStatus,SearchRefundStatus],
-  controllers: [RefundController,BankController,BackofficeController,WebhookController],
-  exports: [RefundService]
+  imports: [
+    TypeOrmModule.forFeature([
+      Refund,
+      RefundDetail,
+      RefundDetailTicket,
+      RefundBank,
+      IlumaCallLog,
+      RefundLog,
+      TicketingCallLog,
+    ]),
+    BrokerModule,
+    ConfigurationModule,
+    PaymentGatewayModule,
+    YggdrasilModule,
+    ApiLogDebugModule,
+  ],
+  providers: [
+    RefundService,
+    Helper,
+    BackofficeService,
+    WebhookService,
+    CronService,
+    BankService,
+    SearchBankStatus,
+    SearchRefundStatus,
+  ],
+  controllers: [
+    RefundController,
+    BankController,
+    BackofficeController,
+    WebhookController,
+  ],
+  exports: [RefundService],
 })
 export class RefundModule {}

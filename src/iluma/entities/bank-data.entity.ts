@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ulid } from 'ulid';
 
 @Entity('bank_datas')
@@ -8,29 +15,29 @@ export class BankData {
 
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
-  @Column({name:'account_number'})
+  @Column({ name: 'account_number' })
   accountNumber: string;
 
   @Column({
     enum: ['pending', 'completed'],
-    name:"account_status"
+    name: 'account_status',
   })
   accountStatus: string;
 
   @Column({
-    name:'account_result',
-    enum:['success',"failed"],
-    nullable:true
+    name: 'account_result',
+    enum: ['success', 'failed'],
+    nullable: true,
   })
   accountResult: string;
 
-  @Column({ type: 'jsonb', nullable: true, name:"iluma_data" })
+  @Column({ type: 'jsonb', nullable: true, name: 'iluma_data' })
   ilumaData: Record<string, any>;
 
-  @Column({name:"last_check_at",type:"timestamptz",nullable:true})
+  @Column({ name: 'last_check_at', type: 'timestamptz', nullable: true })
   lastCheckAt: Date;
 
   @CreateDateColumn({ name: 'created_at' })

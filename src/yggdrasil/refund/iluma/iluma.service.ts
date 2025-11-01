@@ -14,9 +14,9 @@ export class IlumaService {
       return await this.ilumaGatewayService.bankValidator(payload);
     } else if (func == 'get-webhook') {
       return await this.ilumaGatewayService.getWebhook(payload);
-    } else if ((func == 'set-webhook')) {
+    } else if (func == 'set-webhook') {
       return await this.ilumaGatewayService.setWebhook(payload);
-    } else if ((func == 'update-webhook')) {
+    } else if (func == 'update-webhook') {
       return await this.ilumaGatewayService.updateWebhook(payload);
     } else if (func == 'get-result') {
       return await this.ilumaGatewayService.getResult(payload);

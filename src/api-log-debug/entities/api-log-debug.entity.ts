@@ -5,9 +5,8 @@ import {
   Entity,
   PrimaryColumn,
   UpdateDateColumn,
-} from 'typeorm'
+} from 'typeorm';
 import { ulid } from 'ulid';
-
 
 export enum SIGNATURE_STATUS {
   ACCEPTED = 'accepted',
@@ -16,13 +15,12 @@ export enum SIGNATURE_STATUS {
 
 @Entity('api_log_debugs')
 export class ApiLogDebug {
-
   @PrimaryColumn()
   id: string;
 
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
   @Column()
@@ -41,13 +39,13 @@ export class ApiLogDebug {
   @Column({
     type: 'enum',
     enum: SIGNATURE_STATUS,
-    name:"signature_status"
+    name: 'signature_status',
   })
   signatureStatus: string;
 
   @Column({
     type: 'text',
-    name:"raw_payload"
+    name: 'raw_payload',
   })
   rawPayload: string;
 

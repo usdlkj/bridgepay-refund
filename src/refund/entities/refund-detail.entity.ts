@@ -1,15 +1,23 @@
-import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
-import { RefundDetailTicket } from "./refund-detail-ticket.entity";
-import { ulid } from "ulid";
+import {
+  Entity,
+  PrimaryColumn,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { RefundDetailTicket } from './refund-detail-ticket.entity';
+import { ulid } from 'ulid';
 
 @Entity('refund_details')
 export class RefundDetail {
   @PrimaryColumn()
-    id: string;
-  
+  id: string;
+
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
   @Column({ name: 'refund_id', nullable: true })
@@ -33,7 +41,9 @@ export class RefundDetail {
   @Column({ name: 'ticket_office', nullable: true })
   ticketOffice: string;
 
-  @OneToMany(() => RefundDetailTicket, ticket => ticket.refundDetail, { cascade: true })
+  @OneToMany(() => RefundDetailTicket, (ticket) => ticket.refundDetail, {
+    cascade: true,
+  })
   ticketData: RefundDetailTicket[];
 
   @CreateDateColumn({ name: 'created_at' })

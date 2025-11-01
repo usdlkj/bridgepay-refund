@@ -1,17 +1,24 @@
-import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { ulid } from "ulid";
+import {
+  Entity,
+  PrimaryColumn,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { ulid } from 'ulid';
 export enum BankStatus {
-  ENABLE = "enable",
-  DISABLE = "disable"
+  ENABLE = 'enable',
+  DISABLE = 'disable',
 }
 
 export class SearchBankStatus {
-  get(search){
-    let data=[]
-    data["enable"]=BankStatus.ENABLE
-    data["disable"]=BankStatus.DISABLE
-    
-    return data[search]
+  get(search) {
+    const data = [];
+    data['enable'] = BankStatus.ENABLE;
+    data['disable'] = BankStatus.DISABLE;
+
+    return data[search];
   }
 }
 
@@ -22,7 +29,7 @@ export class RefundBank {
 
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
   @Column({ name: 'bank_name' })

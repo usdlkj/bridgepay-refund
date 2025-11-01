@@ -13,7 +13,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         useFactory: (config: ConfigService) => ({
           transport: Transport.RMQ,
           options: {
-            urls: [config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672'],
+            urls: [
+              config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
+            ],
             queue: config.get<string>('rabbitmq.') || 'bridgepay-core',
             queueOptions: {
               durable: true,

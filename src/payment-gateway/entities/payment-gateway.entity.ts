@@ -4,7 +4,6 @@ import {
   DeleteDateColumn,
   Entity,
   Index,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -43,20 +42,29 @@ export class PaymentGateway {
   @Index()
   pgCode: string; // e.g., 'doku', 'xendit', 'finnet'
 
-  @Column({name:'pg_name'})
+  @Column({ name: 'pg_name' })
   pgName: string;
 
-  @Column({
-    type: 'text',
-  })
-  credential: string;
-
+  // --- Legacy (can be deprecated later) ---
+  @Column({ type: 'text' }) credential: string;
   @Column({
     name: 'credential_encrypted',
     type: 'text',
     nullable: true, // temporary during migration
   })
   credentialEncrypted?: string;
+
+  // --- Encrypted fields ---
+  @Column({ type: 'bytea', nullable: true }) credential_enc: Buffer | null;
+  @Column({ type: 'bytea', nullable: true }) credential_iv: Buffer | null;
+  @Column({ type: 'bytea', nullable: true }) credential_tag: Buffer | null;
+  @Column({ type: 'bytea', nullable: true }) credential_edk: Buffer | null;
+  @Column({ type: 'varchar', length: 32, default: 'AES-256-GCM' })
+  credential_alg: string;
+  @Column({ type: 'jsonb', default: () => `'{}'` }) credential_kmd: Record<
+    string,
+    any
+  >;
 
   @Column({
     type: 'enum',
@@ -68,15 +76,15 @@ export class PaymentGateway {
   @Column()
   weight: number;
 
-  @Column({name:'percentage_range'})
+  @Column({ name: 'percentage_range' })
   percentageRange: string;
 
-  @CreateDateColumn({name:'created_at' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn({name:'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @DeleteDateColumn({name:'deleted_at' })
+  @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt?: Date;
 }

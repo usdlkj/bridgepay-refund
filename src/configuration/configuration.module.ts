@@ -6,6 +6,6 @@ import { Configuration } from './entities/configuration.entity';
 @Module({
   imports: [TypeOrmModule.forFeature([Configuration])],
   providers: [ConfigurationService],
-  exports:[ConfigurationService]
+  exports: [ConfigurationService],
 })
 export class ConfigurationModule {}

@@ -1,37 +1,46 @@
-import { Entity, PrimaryColumn, BeforeInsert, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from "typeorm";
-import { RefundDetail } from "./refund-detail.entity";
-import { ulid } from "ulid";
+import {
+  Entity,
+  PrimaryColumn,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { RefundDetail } from './refund-detail.entity';
+import { ulid } from 'ulid';
 
 export enum RefundStatus {
   RBDAPPROVAL = 'rbdApproval',
   FINANCEAPPROVAL = 'financeApproval',
   PENDINGDISBURSEMENT = 'pendingDisbursement',
-  REJECT="reject",
-  SUCCESS="success",
-  FAIL="fail",
-  DONE="done",
-  ONHOLD="onHold",
-  CANCEL="cancel",
-  RETRY="retry",
-  PENDINGCHECKING="pendingChecking"
+  REJECT = 'reject',
+  SUCCESS = 'success',
+  FAIL = 'fail',
+  DONE = 'done',
+  ONHOLD = 'onHold',
+  CANCEL = 'cancel',
+  RETRY = 'retry',
+  PENDINGCHECKING = 'pendingChecking',
 }
 
 export class SearchRefundStatus {
-  get(search){
-    let data=[]
-    data["rbdApproval"]=RefundStatus.RBDAPPROVAL
-    data["financeApproval"]=RefundStatus.FINANCEAPPROVAL
-    data["pendingDisbursement"]=RefundStatus.PENDINGDISBURSEMENT
-    data["reject"]=RefundStatus.REJECT
-    data["success"]=RefundStatus.SUCCESS
-    data["fail"]=RefundStatus.FAIL
-    data["done"]=RefundStatus.DONE
-    data["onHold"]=RefundStatus.ONHOLD
-    data["cancel"]=RefundStatus.CANCEL
-    data["retry"]=RefundStatus.RETRY
-    data["pendingChecking"]=RefundStatus.PENDINGCHECKING
-    
-    return data[search]
+  get(search) {
+    const data = [];
+    data['rbdApproval'] = RefundStatus.RBDAPPROVAL;
+    data['financeApproval'] = RefundStatus.FINANCEAPPROVAL;
+    data['pendingDisbursement'] = RefundStatus.PENDINGDISBURSEMENT;
+    data['reject'] = RefundStatus.REJECT;
+    data['success'] = RefundStatus.SUCCESS;
+    data['fail'] = RefundStatus.FAIL;
+    data['done'] = RefundStatus.DONE;
+    data['onHold'] = RefundStatus.ONHOLD;
+    data['cancel'] = RefundStatus.CANCEL;
+    data['retry'] = RefundStatus.RETRY;
+    data['pendingChecking'] = RefundStatus.PENDINGCHECKING;
+
+    return data[search];
   }
 }
 
@@ -42,7 +51,7 @@ export class Refund {
 
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
   @Column({ name: 'refund_ga_number', nullable: true })
@@ -58,7 +67,7 @@ export class Refund {
     nullable: true,
     default: RefundStatus.RBDAPPROVAL,
   })
-  refundStatus:RefundStatus;
+  refundStatus: RefundStatus;
 
   @Column({ name: 'refund_amount', type: 'numeric', nullable: true })
   refundAmount: number;

@@ -29,7 +29,7 @@ export class XenditService {
       };
     }
   }
-  
+
   async disbursement(payload) {
     try {
       const auth = payload.token + ':';

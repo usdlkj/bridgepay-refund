@@ -11,11 +11,20 @@ import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
 import { ConfigurationModule } from 'src/configuration/configuration.module';
 import { BankData } from './entities/bank-data.entity';
 
-
 @Module({
-  imports: [TypeOrmModule.forFeature([IlumaCallLog, IlumaCallback, RefundBank, BankData]),BrokerModule,YggdrasilModule,ConfigurationModule],
-  providers: [IlumaService,Helper],
+  imports: [
+    TypeOrmModule.forFeature([
+      IlumaCallLog,
+      IlumaCallback,
+      RefundBank,
+      BankData,
+    ]),
+    BrokerModule,
+    YggdrasilModule,
+    ConfigurationModule,
+  ],
+  providers: [IlumaService, Helper],
   controllers: [IlumaController],
-  exports: [IlumaService]
+  exports: [IlumaService],
 })
 export class IlumaModule {}

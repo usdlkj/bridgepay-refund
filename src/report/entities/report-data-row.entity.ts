@@ -5,7 +5,6 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
-
 } from 'typeorm';
 import { Report } from './report.entity';
 import { ulid } from 'ulid';
@@ -13,14 +12,14 @@ import { ulid } from 'ulid';
 @Entity('report_data_rows')
 export class ReportDataRow {
   @PrimaryColumn()
-    id: string;
-  
+  id: string;
+
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
-  @ManyToOne(() => Report, report => report.rows, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Report, (report) => report.rows, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'report_id' })
   report: Report;
 

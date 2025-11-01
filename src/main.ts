@@ -19,7 +19,7 @@ async function bootstrap() {
   //     queueOptions: { durable: true },
   //   },
   // });
-  
+
   // app.useLogger(logger);
   // Start both the microservice listener and the HTTP server.
   // await app.startAllMicroservices();

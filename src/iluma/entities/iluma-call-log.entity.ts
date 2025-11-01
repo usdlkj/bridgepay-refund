@@ -1,14 +1,21 @@
-import { Entity, PrimaryColumn,BeforeInsert, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ulid } from 'ulid';
 
 @Entity('iluma_call_logs')
 export class IlumaCallLog {
   @PrimaryColumn()
   id: string;
-  
+
   @BeforeInsert()
   generateId() {
-    this.id=ulid()
+    this.id = ulid();
   }
 
   @Column()

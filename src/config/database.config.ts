@@ -23,7 +23,7 @@ export default () => ({
     },
   ],
 
-  replication:{
-    defaultMode:process.env.DEFAULT_MODE || 'slave'
-  }
+  replication: {
+    defaultMode: process.env.DEFAULT_MODE || 'slave',
+  },
 });
