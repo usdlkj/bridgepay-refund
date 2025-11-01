@@ -1,14 +1,11 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import * as moment from 'moment-timezone';
-import { ClientProxy } from '@nestjs/microservices';
-import { BrokerModule } from 'src/broker/broker.module';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { ConfigService } from '@nestjs/config';
-import { Refund, RefundStatus } from './entities/refund.entity';
+import { Refund } from './entities/refund.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Helper } from 'src/utils/helper';
 import { BackofficeService } from './backoffice.service';
 const TIMEZONE_WIB = 'Asia/Jakarta';
 const TIMELAPSE_RETRY_REFUND = '*/10 * * * *';
@@ -46,7 +43,7 @@ export class CronService {
         .getMany();
       if (data.length > 0) {
         for (const row of data) {
-          const xendit = this.backofficeService.retryDisbursement(row.refundId);
+          this.backofficeService.retryDisbursement(row.refundId);
         }
       }
     } catch (e) {

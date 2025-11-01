@@ -1,11 +1,11 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { ConfigService } from '@nestjs/config';
-import { Report, reportType } from './entities/report.entity';
-import { Refund, RefundStatus } from 'src/refund/entities/refund.entity';
+import { Report } from './entities/report.entity';
+import { Refund } from 'src/refund/entities/refund.entity';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Not, Brackets } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { CreateReportDto } from './dto/create-report.dto';
 import { ReportDataRow } from './entities/report-data-row.entity';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';

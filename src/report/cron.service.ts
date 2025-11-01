@@ -1,12 +1,10 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import * as moment from 'moment-timezone';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { ConfigService } from '@nestjs/config';
 import { ReportService } from './report.service';
 import { reportType } from './entities/report.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 const TIMEZONE_WIB = 'Asia/Jakarta';
 const REFUND_REPORT = '0 4 * * *';
 const ILUMA_REPORT = '0 5 * * *';

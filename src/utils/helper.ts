@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as crypto from 'crypto';
 import * as refundConfig from 'src/config/refund.config';
 const refundEnv = refundConfig.default();
-
 export class Helper {
   async dtoToJson(data) {
     const stringify = JSON.stringify(data);

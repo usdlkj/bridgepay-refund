@@ -1,7 +1,6 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { BrokerModule } from 'src/broker/broker.module';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -12,8 +11,7 @@ import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository, IsNull, Not } from 'typeorm';
-import { Refund } from './entities/refund.entity';
+import { Repository } from 'typeorm';
 const listType = ['string', 'string', 'fixed'];
 const field = ['bank_name', 'xendit_code', 'bank_status'];
 
@@ -192,10 +190,7 @@ export class BankService {
               ilumaCode: value.code.trim(),
               ilumaData: value,
             };
-            const update = await this.repositoryRefundBank.update(
-              check.id,
-              data,
-            );
+            await this.repositoryRefundBank.update(check.id, data);
           } else {
             result.push(
               `iluma ${value.code} : cant mapping to xendit bank data`,
@@ -220,15 +215,14 @@ export class BankService {
     try {
       const check = await this.repositoryRefundBank.findOne(where);
       // console.log(check);
-      let result;
       if (check) {
         payload['updatedAt'] = moment().toISOString();
-        result = await this.repositoryRefundBank.update(check.id, payload);
+        await this.repositoryRefundBank.update(check.id, payload);
       } else {
         payload['createdAt'] = moment().toISOString();
         payload['updatedAt'] = moment().toISOString();
         const payloadSave = await this.repositoryRefundBank.create(payload);
-        result = await this.repositoryRefundBank.save(payloadSave);
+        await this.repositoryRefundBank.save(payloadSave);
       }
       return {
         status: 200,

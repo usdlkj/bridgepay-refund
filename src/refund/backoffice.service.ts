@@ -1,12 +1,11 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { BrokerModule } from 'src/broker/broker.module';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository, IsNull, Not } from 'typeorm';
+import { Repository } from 'typeorm';
 import {
   Refund,
   RefundStatus,
@@ -15,7 +14,6 @@ import {
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { RefundService } from './refund.service';
-import { privateDecrypt } from 'crypto';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundLog } from './entities/refund-log.entity';
 const listType = ['string', 'json', 'number', 'date', 'enum', 'date'];
@@ -176,7 +174,7 @@ export class BackofficeService {
 
       const sequenceData = check.retryAttempt ? check.retryAttempt : [];
       sequenceData.push(moment().format('YYYY-MM-DD HH:mm:ss'));
-      const update = await this.repositoryRefund.update(check.id, {
+      await this.repositoryRefund.update(check.id, {
         retryAttempt: sequenceData,
       });
       const generatePayload =
@@ -184,7 +182,6 @@ export class BackofficeService {
       await this.repositoryRefund.update(check.id, {
         requestData: generatePayload.requestData,
       });
-      let result;
       const credential = await this.#getXenditToken();
       const payloadDisbursement = {
         provider: 'xendit',
@@ -195,11 +192,7 @@ export class BackofficeService {
 
       const xendit = await this.yggdrasilService.refund(payloadDisbursement);
       if (xendit.status == 200) {
-        result = {
-          status: 200,
-          message: 'Success',
-        };
-        const update = await this.repositoryRefund.update(check.id, {
+        await this.repositoryRefund.update(check.id, {
           refundStatus: RefundStatus.RETRY,
         });
       } else {

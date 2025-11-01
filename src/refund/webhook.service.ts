@@ -1,7 +1,6 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { BrokerModule } from 'src/broker/broker.module';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
@@ -13,7 +12,7 @@ import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository, IsNull, Not, In } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import axios from 'axios';
 
 @Injectable()

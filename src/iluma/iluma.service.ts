@@ -1,12 +1,11 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import { IlumaCallLog } from './entities/iluma-call-log.entity';
 import { IlumaCallback } from './entities/iluma-callback.entity';
 import { ClientProxy } from '@nestjs/microservices';
-import { BrokerModule } from 'src/broker/broker.module';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
@@ -45,7 +44,6 @@ export class IlumaService {
 
   async checkAccount(payload) {
     try {
-      let accountName = null;
       let result;
       let status;
       const ilumaCode = await this.repositoryRefundBank.findOne({
@@ -169,9 +167,6 @@ export class IlumaService {
         }
         let sleepTimer = 5000;
 
-        const _whereTimer = {
-          configName: 'CHECK_ACCOUNT_SLEEP_PERIOD',
-        };
         const getTimer = await this.configurationService.findByConfigName(
           'CHECK_ACCOUNT_SLEEP_PERIOD',
         );
@@ -184,7 +179,7 @@ export class IlumaService {
         //end get limit & sleep timer
 
         while (flag < limit) {
-          const sleep = await this.helper.sleep(sleepTimer);
+          await this.helper.sleep(sleepTimer);
           const payloadGetResult = {
             provider: 'iluma',
             func: 'get-result',
@@ -210,7 +205,6 @@ export class IlumaService {
             check.data.result.is_virtual_account == false
           ) {
             status = 'success';
-            accountName = check.data.result.account_holder_name;
             flag = limit;
             await this.repositoryBankData.update(bankDataRecord.id, {
               accountResult: 'success',
@@ -238,7 +232,6 @@ export class IlumaService {
         checkIluma.data.result.is_virtual_account == false
       ) {
         status = 'success';
-        accountName = checkIluma.data.result.account_holder_name;
         if (!bankDataRecord) {
           const checkData = await this.repositoryBankData.findOne({
             where: {
@@ -263,7 +256,7 @@ export class IlumaService {
           });
         }
       } else {
-        ((status = 'failed'), (accountName = null));
+        status = 'failed';
         if (!bankDataRecord) {
           const checkData = await this.repositoryBankData.findOne({
             where: {
@@ -321,10 +314,7 @@ export class IlumaService {
           responseAt: moment().format('YYYY-MM-DD HH:mm:ss'),
           updatedAt: moment().toISOString(),
         };
-        const responseLog = await this.repositoryCallback.update(
-          check.id,
-          payload,
-        );
+        await this.repositoryCallback.update(check.id, payload);
         // if(data.result.is_found==true){
         //     let payAccount={
         //         refundId:check.refundId,

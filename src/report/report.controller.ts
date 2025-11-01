@@ -3,8 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Headers,
-  Query,
   Param,
   Res,
   HttpStatus,
@@ -80,7 +78,6 @@ export class ReportController {
           { header: 'originalTicketPrice', key: 'originalTicketPrice' },
         ];
         const reportData = data.data;
-        const endData = reportData.length - 1;
         for (const row of reportData) {
           worksheet.addRow({
             seqNo: row.seqNo,

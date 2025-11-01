@@ -1,7 +1,6 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { BrokerModule } from 'src/broker/broker.module';
-import { getEnv, isDevOrTest, getCredentialForEnv } from '../utils/env.utils';
+import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
@@ -64,7 +63,7 @@ export class RefundService {
       } else {
         ticketingCall = 1;
       }
-      console.log('sampe sini');
+
       const credential = await this.#getXenditToken();
       const check = await this.repositoryRefund.findOne({
         where: {
@@ -190,13 +189,10 @@ export class RefundService {
             await this.repositoryRefundDetailTicket.save(ticketSave);
           listTicket.push(saveTicket);
         }
-        const updateDetail = await this.repositoryRefundDetail.update(
-          saveDetail.id,
-          {
-            ticketData: listTicket,
-          },
-        );
-        const updateRefund = await this.repositoryRefund.update(create.id, {
+        await this.repositoryRefundDetail.update(saveDetail.id, {
+          ticketData: listTicket,
+        });
+        await this.repositoryRefund.update(create.id, {
           refundDetail: saveDetail,
         });
       }
@@ -385,7 +381,7 @@ export class RefundService {
         },
       });
       const data = [];
-      bankList.map(function (value, index) {
+      bankList.map(function (value) {
         const temp = {
           code: value.xenditCode,
           name: value.bankName,
@@ -407,7 +403,7 @@ export class RefundService {
     }
   }
 
-  async generateXenditRefundPayload(refund: Object) {
+  async generateXenditRefundPayload(refund: object) {
     return await this.#generateXenditRefundPayload(refund);
   }
 
