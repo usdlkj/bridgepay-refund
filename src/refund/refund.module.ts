@@ -22,6 +22,7 @@ import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
 import { ApiLogDebugModule } from 'src/api-log-debug/api-log-debug.module';
 import { RefundLog } from './entities/refund-log.entity';
 import { TicketingCallLog } from './entities/ticketing-call-log.entity';
+import { EncryptorClient } from '../utils/encryptor.client';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { TicketingCallLog } from './entities/ticketing-call-log.entity';
     BankService,
     SearchBankStatus,
     SearchRefundStatus,
+    EncryptorClient,
   ],
   controllers: [
     RefundController,

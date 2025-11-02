@@ -14,6 +14,11 @@ import { CreatePaymentGatewayDto } from './dto/create-payment-gateway.dto';
 export class PaymentGatewayController {
   constructor(private readonly service: PaymentGatewayService) {}
 
+  @Get('credential')
+  async getCredentialByPgCode(@Query('pgCode') pgCode: string) {
+    return this.service.getCredential(pgCode);
+  }
+
   @Get()
   async getPaymentGatewayByName(@Query('pgName') pgName: string) {
     return this.service.findOneLikeName({ pgName });
