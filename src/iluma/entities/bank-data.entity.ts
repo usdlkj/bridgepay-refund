@@ -51,6 +51,9 @@ export class BankData {
     string,
     any
   >;
+  @Column({ type: 'varchar', nullable: true})
+  account_number_idx: string;
+
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

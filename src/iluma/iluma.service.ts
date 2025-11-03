@@ -73,15 +73,43 @@ export class IlumaService {
         .toISOString();
       const datePast = new Date(datePastString);
 
-      const checkAccount = await this.repositoryBankData.findOne({
+      // const checkAccount = await this.repositoryBankData.findOne({
+      //   where: {
+      //     accountNumber: payload.reqData.account.accountNo,
+      //     lastCheckAt: MoreThan(datePast),
+      //   },
+      //   order: {
+      //     createdAt: 'DESC',
+      //   },
+      // });
+      let checkIndexPayload = {
+        value:payload.reqData.account.accountNo,
+        context :`bankData:accountNumber`
+      }
+
+      const aad = Buffer.from(`bank_datas:${payload.reqData.account.accountNo}`, 'utf8');
+      
+      const encCtxExtra = {
+          table: 'bank_datas',
+          accountNumber: String(payload.reqData.account.accountNo),
+        };
+      //check by blind index
+      const checkIndexPayloadEncrypt = await firstValueFrom(
+          this.encryptorClient.proxy
+            .send('blind-index', checkIndexPayload)
+            .pipe(timeout(5000)),
+      );
+      const checkAccount =  await this.repositoryBankData.findOne({
         where: {
-          accountNumber: payload.reqData.account.accountNo,
+          account_number_idx:checkIndexPayloadEncrypt,
           lastCheckAt: MoreThan(datePast),
         },
         order: {
           createdAt: 'DESC',
         },
       });
+
+      //end check by blind index
       let bankDataRecord;
       if (checkAccount) {
         const accountData = checkAccount;
@@ -103,14 +131,21 @@ export class IlumaService {
       } else {
 
         let lastCheckedAt = moment().toISOString();
-        //encrypt process
-        const aad = Buffer.from(`bank_datas:${payload.reqData.account.accountNo}:${lastCheckedAt}`, 'utf8');
-        const encCtxExtra = {
-          table: 'payment_gateways',
-          pgCode: String(payload.reqData.account.accountNo),
-          lastCheckedAt: String(lastCheckedAt),
-
+        
+        const bankDataPayload = {
+          accountNumber: payload.reqData.account.accountNo,
+          accountStatus: 'pending',
+          lastCheckAt: lastCheckedAt,
+          createdAt: moment().toISOString(),
+          updatedAt: moment().toISOString(),
         };
+        const savePayload =
+          await this.repositoryBankData.create(bankDataPayload);
+        bankDataRecord = await this.repositoryBankData.save(savePayload);
+
+        //encrypt process
+        
+        
         const payloadEncryptor = {
           value: Buffer.from(payload.reqData.account.accountNo, 'utf8').toString('base64'),
           aad: aad.toString('base64'),
@@ -133,23 +168,31 @@ export class IlumaService {
           throw new Error('Invalid encrypt response');
         }
 
-        //end encrypt process
-        const bankDataPayload = {
-          accountNumber: payload.reqData.account.accountNo,
-          accountStatus: 'pending',
-          lastCheckAt: lastCheckedAt,
-          createdAt: moment().toISOString(),
-          updatedAt: moment().toISOString(),
+        //create blind index
+        let indexPayload = {
+          value:payload.reqData.account.accountNo,
+          context :`bankData:accountNumber`
+        }
+
+        const indexPayloadEncrypt = await firstValueFrom(
+          this.encryptorClient.proxy
+            .send('blind-index', indexPayload)
+            .pipe(timeout(5000)),
+        );
+        //end create blind index
+
+
+
+        await this.repositoryBankData.update(bankDataRecord.id,{
           account_number_enc : Buffer.from(encrypted.enc, 'base64'),
           account_number_iv : Buffer.from(encrypted.iv, 'base64'),
           account_number_tag : Buffer.from(encrypted.tag, 'base64'),
           account_number_edk : Buffer.from(encrypted.edk, 'base64'),
           account_number_alg : encrypted.alg,
-          account_number_kmd : encrypted.kmd
-        };
-        const savePayload =
-          await this.repositoryBankData.create(bankDataPayload);
-        bankDataRecord = await this.repositoryBankData.save(savePayload);
+          account_number_kmd : encrypted.kmd,
+          account_number_idx :indexPayloadEncrypt
+        })
+        //end encrypt process
       }
 
       const payloadValidator = {
