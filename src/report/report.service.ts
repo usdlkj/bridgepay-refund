@@ -161,7 +161,9 @@ export class ReportService {
                         arrivalTime:"-",
                         seatClass:ticketData!=null?ticketData.ticketClass:"-",
                         ticketType:"-",
-                        originalTicketPrice:ticketData!=null?ticketData.purchasePrice:"-"
+                        originalTicketPrice:ticketData!=null?ticketData.purchasePrice:"-",
+                        createdAt:moment().toISOString(),
+                        updatedAt:moment().toISOString()
                     }
                     let rowSave = this.repositoryReportDataRow.create(row);
                     await this.repositoryReportDataRow.save(rowSave)

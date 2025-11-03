@@ -131,7 +131,9 @@ export class RefundService {
                 let ticketingCallPayload ={
                     refundNumber:payload.reqData.invoice.orderId,
                     payload:payload,
-                    response:dataDetail.data
+                    response:dataDetail.data,
+                    createdAt:moment().toISOString(),
+                    updatedAt:moment().toISOString()
                 
                 }
                 let ticketingCallPayloadSave = await this.repositoryTicketingCallLog.create(ticketingCallPayload);
@@ -176,7 +178,9 @@ export class RefundService {
                         seatNumber:dataTicket.seatNumber,
                         ticketClass:dataTicket.ticketClass,
                         ticketNumber:dataTicket.ticketNumber,
-                        refundDetailId:saveDetail
+                        refundDetailId:saveDetail,
+                        createdAt:moment().toISOString(),
+                        updatedAt:moment().toISOString()
                     }
                     let ticketSave = await this.repositoryRefundDetailTicket.create(ticket);
                     let saveTicket = await this.repositoryRefundDetailTicket.save(ticketSave);
@@ -267,7 +271,9 @@ export class RefundService {
                 location:"/api/v2/transfer",
                 detail:JSON.stringify(e),
                 msg:e.message,
-                notes:payload.reqData.invoice.orderId
+                notes:payload.reqData.invoice.orderId,
+                createdAt:moment().toISOString(),
+                updatedAt:moment().toISOString()
             }
             let logPayloadSave = await this.repositoryRefundLog.create(logPayload);
             await this.repositoryRefundLog.save(logPayloadSave);

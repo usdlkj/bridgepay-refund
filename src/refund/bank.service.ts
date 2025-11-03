@@ -166,7 +166,9 @@ export class BankService {
                 url:"https://api.iluma.ai/bank/available_bank_codes",
                 payload:null,
                 method:"get",
-                response:iluma
+                response:iluma,
+                createdAt:moment().toISOString(),
+                updatedAt:moment().toISOString()
             }
             let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
             await this.repositoryCallLog.save(payloadLogSave);

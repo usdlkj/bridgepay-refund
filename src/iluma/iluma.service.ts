@@ -14,7 +14,6 @@ import { ConfigurationService } from 'src/configuration/configuration.service';
 import * as moment from 'moment-timezone';
 import { BankData } from './entities/bank-data.entity';
 
-
 @Injectable()
 export class IlumaService {
 
@@ -131,7 +130,9 @@ private env: string;
             url:"https://api.iluma.ai/v1.2/identity/bank_account_validation_details",
             payload:bankData,
             method:"post",
-            response:checkIluma.data
+            response:checkIluma.data,
+            createdAt:moment().toISOString(),
+            updatedAt:moment().toISOString()
         }
         let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
         await this.repositoryCallLog.save(payloadLogSave);
@@ -142,7 +143,7 @@ private env: string;
             requestNumber:checkIluma.data.id,
             payload:checkIluma,
             createdAt:moment().toISOString(),
-                updatedAt:moment().toISOString()
+            updatedAt:moment().toISOString()
     
             }
             let ilumaPayloadSave = await this.repositoryCallback.create(ilumaPayload);
@@ -193,7 +194,9 @@ private env: string;
                     url:"https://api.iluma.ai/v1.2/identity/bank_account_validation_details/"+checkIluma.data.id+"",
                     payload:checkIluma.data.id,
                     method:"post",
-                    response:check
+                    response:check,
+                    createdAt:moment().toISOString(),
+                    updatedAt:moment().toISOString()
                 }
                 let payloadLogSave = await this.repositoryCallLog.create(payloadLog);
                 await this.repositoryCallLog.save(payloadLogSave);
