@@ -12,6 +12,8 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import * as moment from 'moment-timezone';
 import { BankData } from './entities/bank-data.entity';
+import { EncryptorClient } from '../utils/encryptor.client';
+import { firstValueFrom, timeout, TimeoutError } from 'rxjs';
 
 @Injectable()
 export class IlumaService {
@@ -38,6 +40,8 @@ export class IlumaService {
     private readonly yggdrasilService: YggdrasilService,
 
     private configurationService: ConfigurationService,
+
+    private encryptorClient: EncryptorClient,
   ) {
     this.env = getEnv(this.configService);
   }
@@ -97,12 +101,51 @@ export class IlumaService {
           throw new Error(accountData.accountNumber + ' has been checking');
         }
       } else {
+
+        let lastCheckedAt = moment().toISOString();
+        //encrypt process
+        const aad = Buffer.from(`bank_datas:${payload.reqData.account.accountNo}:${lastCheckedAt}`, 'utf8');
+        const encCtxExtra = {
+          table: 'payment_gateways',
+          pgCode: String(payload.reqData.account.accountNo),
+          lastCheckedAt: String(lastCheckedAt),
+
+        };
+        const payloadEncryptor = {
+          value: Buffer.from(payload.reqData.account.accountNo, 'utf8').toString('base64'),
+          aad: aad.toString('base64'),
+          context: encCtxExtra,
+        };
+
+        const encrypted = await firstValueFrom(
+          this.encryptorClient.proxy
+            .send('encrypt', payloadEncryptor)
+            .pipe(timeout(5000)),
+        );
+
+        if (
+          !encrypted?.enc ||
+          !encrypted?.iv ||
+          !encrypted?.tag ||
+          !encrypted?.edk ||
+          !encrypted?.alg
+        ) {
+          throw new Error('Invalid encrypt response');
+        }
+
+        //end encrypt process
         const bankDataPayload = {
           accountNumber: payload.reqData.account.accountNo,
           accountStatus: 'pending',
-          lastCheckAt: moment().toISOString(),
+          lastCheckAt: lastCheckedAt,
           createdAt: moment().toISOString(),
           updatedAt: moment().toISOString(),
+          account_number_enc : Buffer.from(encrypted.enc, 'base64'),
+          account_number_iv : Buffer.from(encrypted.iv, 'base64'),
+          account_number_tag : Buffer.from(encrypted.tag, 'base64'),
+          account_number_edk : Buffer.from(encrypted.edk, 'base64'),
+          account_number_alg : encrypted.alg,
+          account_number_kmd : encrypted.kmd
         };
         const savePayload =
           await this.repositoryBankData.create(bankDataPayload);

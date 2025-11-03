@@ -40,6 +40,18 @@ export class BankData {
   @Column({ name: 'last_check_at', type: 'timestamptz', nullable: true })
   lastCheckAt: Date;
 
+    // --- Encrypted fields ---
+  @Column({ type: 'bytea', nullable: true }) account_number_enc: Buffer | null;
+  @Column({ type: 'bytea', nullable: true }) account_number_iv: Buffer | null;
+  @Column({ type: 'bytea', nullable: true }) account_number_tag: Buffer | null;
+  @Column({ type: 'bytea', nullable: true }) account_number_edk: Buffer | null;
+  @Column({ type: 'varchar', length: 32, default: 'AES-256-GCM' })
+  account_number_alg: string;
+  @Column({ type: 'jsonb', default: () => `'{}'` }) account_number_kmd: Record<
+    string,
+    any
+  >;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
