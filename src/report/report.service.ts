@@ -165,8 +165,8 @@ export class ReportService {
                         createdAt:moment().toISOString(),
                         updatedAt:moment().toISOString()
                     }
-                    let rowSave = this.repositoryReportDataRow.create(row);
-                    await this.repositoryReportDataRow.save(rowSave)
+                    // let rowSave = this.repositoryReportDataRow.create(row);
+                    // await this.repositoryReportDataRow.save(rowSave)
                     refundData.push(row)
                     no++;
                 }
