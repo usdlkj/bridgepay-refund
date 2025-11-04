@@ -184,8 +184,10 @@ export class ReportService {
 
     async #ilumaReportGenerate(report){
         try{
+             let refundStartDate = moment.tz(report.refundStartDate,"Asia/Jakarta").startOf("day").toISOString();
+            let refundEndDate = moment.tz(report.refundEndDate,"Asia/Jakarta").endOf("day").toISOString();
             let data = await this.repositoryIlumaCallLog.createQueryBuilder("ilumaCallLog")
-            .andWhere(`ilumaCallLog.created_at between '${report.refundStartDate}' and '${report.refundEndDate}'`)
+            .andWhere(`ilumaCallLog.created_at between '${refundStartDate}' and '${refundEndDate}'`)
             .getMany()
 
 
