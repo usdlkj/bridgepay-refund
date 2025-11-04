@@ -10,6 +10,7 @@ import { Like, Repository,IsNull, Not } from 'typeorm';
 import { Refund,RefundStatus,SearchRefundStatus } from './entities/refund.entity';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
+import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { RefundService } from './refund.service';
 import { privateDecrypt } from 'crypto';
 import { RefundDetail } from './entities/refund-detail.entity';
@@ -37,7 +38,8 @@ export class BackofficeService {
         private readonly refundService:RefundService,
         private readonly searchRefundStatus:SearchRefundStatus,
         private readonly configurationService:ConfigurationService,
-        private readonly yggdrasilService : YggdrasilService
+        private readonly yggdrasilService : YggdrasilService,
+        private readonly paymentGatewayService:PaymentGatewayService
     
         ) {
         this.env = getEnv(this.configService);
@@ -228,10 +230,10 @@ export class BackofficeService {
     }
 
     async #getXenditToken(){
-        const pgData = await this.coreService.send({ cmd: 'get-payment-gateway-like-name' },{pgName:'xendit'}).toPromise();
+        const pgData = await this.paymentGatewayService.findOneLikeName({pgName:'xendit'})
         const credentialData = JSON.parse(pgData.credential);
         // console.log(credentialData);
         const credential = credentialData[await this.configService.get('nodeEnv')];
         return credential
-    }
+      }
 }

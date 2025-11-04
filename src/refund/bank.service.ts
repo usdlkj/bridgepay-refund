@@ -10,6 +10,7 @@ import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository,IsNull, Not } from 'typeorm';
+import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { Refund } from './entities/refund.entity';
 const listType =['string',"string","fixed"];
 const field=["bank_name","xendit_code","bank_status"]
@@ -20,7 +21,6 @@ export class BankService {
         
         constructor(
         private helper:Helper,
-        @Inject('RefundToCoreClient') private readonly coreService: ClientProxy,
     
         @InjectRepository(RefundBank)
         private repositoryRefundBank: Repository<RefundBank>,
@@ -31,7 +31,8 @@ export class BankService {
     
         private readonly configService: ConfigService,
 
-        private readonly yggdrasilService: YggdrasilService
+        private readonly yggdrasilService: YggdrasilService,
+        private readonly paymentGatewayService:PaymentGatewayService
     
         ) {
         this.env = getEnv(this.configService);
@@ -233,10 +234,10 @@ export class BankService {
     }
 
     async #getXenditToken(){
-        const pgData = await this.coreService.send({ cmd: 'get-payment-gateway-like-name' },{pgName:'xendit'}).toPromise();
+        const pgData = await this.paymentGatewayService.findOneLikeName({pgName:'xendit'})
         const credentialData = JSON.parse(pgData.credential);
         // console.log(credentialData);
         const credential = credentialData[await this.configService.get('nodeEnv')];
         return credential
-    }
+      }
 }
