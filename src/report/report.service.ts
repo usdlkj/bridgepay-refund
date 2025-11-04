@@ -97,10 +97,8 @@ export class ReportService {
 
     async #refundReportGenerate(report){
         try{
-            let refundStartDate = moment(report.refundStartDate).startOf("day").tz("Asia/Jakarta").toISOString();
-            let refundEndDate = moment(report.refundEndDate).endOf("day").tz("Asia/Jakarta").toISOString();
-            console.log(moment(report.refundStartDate).startOf("day").tz("Asia/Jakarta"))
-            console.log(moment(report.refundEndDate).endOf("day").tz("Asia/Jakarta"))
+            let refundStartDate = moment.tz(report.refundStartDate,"Asia/Jakarta").startOf("day").toISOString();
+            let refundEndDate = moment.tz(report.refundEndDate,"Asia/Jakarta").endOf("day").toISOString();
             let data = await this.repositoryRefund.createQueryBuilder("refund")
             .leftJoinAndSelect("refund.refundDetail","refundDetail")
             .where(new Brackets(qb=>{
