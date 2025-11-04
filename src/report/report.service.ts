@@ -97,6 +97,8 @@ export class ReportService {
 
     async #refundReportGenerate(report){
         try{
+            let refundStartDate = moment(report.refundStartDate).tz("Asia/Jakarta").toISOString();
+            let refundEndDate = moment(report.refundEndDate).tz("Asia/Jakarta").toISOString();
             let data = await this.repositoryRefund.createQueryBuilder("refund")
             .leftJoinAndSelect("refund.refundDetail","refundDetail")
             .where(new Brackets(qb=>{
@@ -104,7 +106,7 @@ export class ReportService {
                 .orWhere(`refund.refundStatus='done'`)
             
             }))
-            .andWhere(`refund.created_at between '${report.refundStartDate}' and '${report.refundEndDate}'`)
+            .andWhere(`refund.created_at between '${refundStartDate}' and '${refundEndDate}'`)
             .getMany()
 
 
