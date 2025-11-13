@@ -94,9 +94,23 @@ export class IlumaService {
           };
           return result;
         } else {
-          throw new Error(accountData.accountNumber + ' has been checking');
+          const staleDate = moment(accountData.updatedAt)
+            .add(15, 'minutes')
+            .toDate();
+          if (new Date() > staleDate) {
+            await this.repositoryBankData.update(accountData.id, {
+              accountStatus: 'expired',
+              accountResult: 'failed',
+              updatedAt: moment().toISOString(),
+            });
+            bankDataRecord = null;
+          } else {
+            throw new Error(accountData.accountNumber + ' has been checking');
+          }
         }
-      } else {
+      }
+
+      if (!bankDataRecord) {
         const bankDataPayload = {
           accountNumber: payload.reqData.account.accountNo,
           accountStatus: 'pending',
@@ -123,11 +137,19 @@ export class IlumaService {
         };
         return result;
       }
+      const maskedBankData = {
+        ...bankData,
+        bank_account_number: this.helper.maskString(
+          bankData.bank_account_number,
+        ),
+      };
       const payloadLog = {
         url: 'https://api.iluma.ai/v1.2/identity/bank_account_validation_details',
-        payload: bankData,
+        payload: maskedBankData,
         method: 'post',
         response: checkIluma.data,
+        createdAt: moment().toISOString(),
+        updatedAt: moment().toISOString(),
       };
       const payloadLogSave = await this.repositoryCallLog.create(payloadLog);
       await this.repositoryCallLog.save(payloadLogSave);
@@ -149,7 +171,6 @@ export class IlumaService {
             retMsg: 'Fail save iluma Callback Data',
           };
           return result;
-          ``;
         }
         status = 'pending';
         let flag = 0;
@@ -178,6 +199,7 @@ export class IlumaService {
         }
         //end get limit & sleep timer
 
+        let completedInLoop = false;
         while (flag < limit) {
           await this.helper.sleep(sleepTimer);
           const payloadGetResult = {
@@ -187,18 +209,18 @@ export class IlumaService {
             credential: await this.configService.get('ilumaToken'),
           };
           const check = await this.yggdrasilService.refund(payloadGetResult);
-          const payloadLog = {
+          const loopLog = {
             url:
               'https://api.iluma.ai/v1.2/identity/bank_account_validation_details/' +
-              checkIluma.data.id +
-              '',
-            payload: checkIluma.data.id,
+              checkIluma.data.id,
+            payload: maskedBankData,
             method: 'post',
             response: check,
+            createdAt: moment().toISOString(),
+            updatedAt: moment().toISOString(),
           };
-          const payloadLogSave =
-            await this.repositoryCallLog.create(payloadLog);
-          await this.repositoryCallLog.save(payloadLogSave);
+          const loopLogSave = await this.repositoryCallLog.create(loopLog);
+          await this.repositoryCallLog.save(loopLogSave);
           if (
             check.data.status.toLowerCase() == 'completed' &&
             check.data.result.is_found == true &&
@@ -224,6 +246,18 @@ export class IlumaService {
             status = 'failed';
             flag = limit;
           }
+
+          if (status === 'success') {
+            completedInLoop = true;
+          }
+        }
+        if (!completedInLoop && status === 'pending') {
+          await this.repositoryBankData.update(bankDataRecord.id, {
+            accountResult: 'failed',
+            accountStatus: 'expired',
+            updatedAt: moment().toISOString(),
+          });
+          status = 'failed';
         }
         // console.log(status)
       } else if (
@@ -235,7 +269,7 @@ export class IlumaService {
         if (!bankDataRecord) {
           const checkData = await this.repositoryBankData.findOne({
             where: {
-              id: payload.reqData.account.accountNo,
+              accountNumber: payload.reqData.account.accountNo,
               accountStatus: 'pending',
             },
           });
@@ -260,7 +294,7 @@ export class IlumaService {
         if (!bankDataRecord) {
           const checkData = await this.repositoryBankData.findOne({
             where: {
-              id: payload.reqData.account.accountNo,
+              accountNumber: payload.reqData.account.accountNo,
               accountStatus: 'pending',
             },
           });

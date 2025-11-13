@@ -1,5 +1,4 @@
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +11,7 @@ import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 const listType = ['string', 'string', 'fixed'];
 const field = ['bank_name', 'xendit_code', 'bank_status'];
 
@@ -21,7 +21,6 @@ export class BankService {
 
   constructor(
     private helper: Helper,
-    @Inject('RefundToCoreClient') private readonly coreService: ClientProxy,
 
     @InjectRepository(RefundBank)
     private repositoryRefundBank: Repository<RefundBank>,
@@ -33,6 +32,7 @@ export class BankService {
     private readonly configService: ConfigService,
 
     private readonly yggdrasilService: YggdrasilService,
+    private readonly paymentGatewayService: PaymentGatewayService,
   ) {
     this.env = getEnv(this.configService);
   }
@@ -157,6 +157,7 @@ export class BankService {
       );
     }
   }
+
   async #ilumaSync() {
     try {
       const payload = {
@@ -170,10 +171,11 @@ export class BankService {
         payload: null,
         method: 'get',
         response: iluma,
+        createdAt: moment().toISOString(),
+        updatedAt: moment().toISOString(),
       };
       const payloadLogSave = await this.repositoryCallLog.create(payloadLog);
       await this.repositoryCallLog.save(payloadLogSave);
-      // console.log(iluma);
       if (iluma.status != 200) {
         throw new Error(iluma.msg);
       } else {
@@ -197,11 +199,7 @@ export class BankService {
             );
           }
         }
-        // if(result.length >0){
-        //     log.cronlog(JSON.stringify(result))
-        // }else{
-        //     log.cronlog("iluma bank data synced")
-        // }
+        // Optional: log result if needed
       }
     } catch (e) {
       throw new HttpException(
@@ -237,11 +235,10 @@ export class BankService {
   }
 
   async #getXenditToken() {
-    const pgData = await this.coreService
-      .send({ cmd: 'get-payment-gateway-like-name' }, { pgName: 'xendit' })
-      .toPromise();
+    const pgData = await this.paymentGatewayService.findOneLikeName({
+      pgName: 'xendit',
+    });
     const credentialData = JSON.parse(pgData.credential);
-    // console.log(credentialData);
     const credential = credentialData[await this.configService.get('nodeEnv')];
     return credential;
   }

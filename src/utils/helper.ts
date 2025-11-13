@@ -137,4 +137,14 @@ export class Helper {
     };
     return refundStatus[key];
   }
+
+  maskString(value: string, visibleDigits = 4) {
+    if (!value) {
+      return value;
+    }
+    const unmaskedLength = Math.min(visibleDigits, value.length);
+    const maskedSection = '*'.repeat(value.length - unmaskedLength);
+    const visibleSection = value.slice(-unmaskedLength);
+    return maskedSection + visibleSection;
+  }
 }

@@ -134,6 +134,8 @@ export class RefundService {
           refundNumber: payload.reqData.invoice.orderId,
           payload: payload,
           response: dataDetail.data,
+          createdAt: moment().toISOString(),
+          updatedAt: moment().toISOString(),
         };
         const ticketingCallPayloadSave =
           await this.repositoryTicketingCallLog.create(ticketingCallPayload);
@@ -182,6 +184,8 @@ export class RefundService {
             ticketClass: dataTicket.ticketClass,
             ticketNumber: dataTicket.ticketNumber,
             refundDetailId: saveDetail,
+            createdAt: moment().toISOString(),
+            updatedAt: moment().toISOString(),
           };
           const ticketSave =
             await this.repositoryRefundDetailTicket.create(ticket);
@@ -205,66 +209,40 @@ export class RefundService {
       //end create payload
 
       if (create) {
-        let refundDelay = 0;
+        const refund = await this.repositoryRefund.findOne({
+          where: {
+            refundId: payload.reqData.invoice.orderId,
+          },
+        });
 
-        const delayConfig =
-          await this.configurationService.findByConfigName('REFUND_DELAY');
-        if (delayConfig) {
-          refundDelay = parseInt(delayConfig.configValue);
-        }
-        if (refundDelay <= 0) {
-          const refund = await this.repositoryRefund.findOne({
-            where: {
-              refundId: payload.reqData.invoice.orderId,
-            },
-          });
+        const { requestData, payloadRefund } =
+          await this.#generateXenditRefundPayload(refund);
 
-          const { requestData, payloadRefund } =
-            await this.#generateXenditRefundPayload(refund);
+        await this.repositoryRefund.update(refund.id, {
+          requestData: requestData,
+        });
 
-          await this.repositoryRefund.update(refund.id, {
-            requestData: requestData,
-          });
+        const payloadDisbursement = {
+          provider: 'xendit',
+          func: 'disbursement',
+          data: payloadRefund,
+          token: credential.secretKey,
+        };
 
-          const payloadDisbursement = {
-            provider: 'xendit',
-            func: 'disbursement',
-            data: payloadRefund,
-            token: credential.secretKey,
+        const xendit = await this.yggdrasilService.refund(payloadDisbursement);
+        if (xendit.status == 200) {
+          result = {
+            status: 200,
+            message: 'Success',
           };
-
-          const xendit =
-            await this.yggdrasilService.refund(payloadDisbursement);
-          if (xendit.status == 200) {
-            result = {
-              status: 200,
-              message: 'Success',
-            };
-            await this.repositoryRefund.update(refund.id, {
-              refundStatus: RefundStatus.PENDINGDISBURSEMENT,
-            });
-            invoice['status'] = await this.helper.statusWording(
-              'pendingDisbursement',
-            );
-          } else {
-            throw new Error('Failed Xendit disbursement');
-          }
-        } else {
-          let addedDate;
-          if (refundDelay > 30) {
-            addedDate = 30;
-          } else {
-            addedDate = refundDelay;
-          }
-
-          const refundSchedule = moment().add(addedDate, 'd').toISOString();
-          await this.repositoryRefund.update(create.id, {
+          await this.repositoryRefund.update(refund.id, {
             refundStatus: RefundStatus.PENDINGDISBURSEMENT,
-            targetRefundDate: refundSchedule,
           });
           invoice['status'] = await this.helper.statusWording(
             'pendingDisbursement',
           );
+        } else {
+          throw new Error('Failed Xendit disbursement');
         }
         const sign = await this.helper.sign(
           JSON.stringify({ invoice: invoice }),
@@ -288,9 +266,23 @@ export class RefundService {
         detail: JSON.stringify(e),
         msg: e.message,
         notes: payload.reqData.invoice.orderId,
+        createdAt: moment().toISOString(),
+        updatedAt: moment().toISOString(),
       };
       const logPayloadSave = await this.repositoryRefundLog.create(logPayload);
       await this.repositoryRefundLog.save(logPayloadSave);
+      const existingRefund = await this.repositoryRefund.findOne({
+        where: {
+          refundId: payload.reqData.invoice.orderId,
+        },
+      });
+      if (existingRefund) {
+        await this.repositoryRefund.update(existingRefund.id, {
+          refundStatus: RefundStatus.FAIL,
+          rejectReason: e.message,
+          updatedAt: moment().toISOString(),
+        });
+      }
       const result = {
         retCode: -1,
         retMsg: e.message,
