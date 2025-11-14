@@ -21,7 +21,7 @@ async function bootstrap() {
   // app.useLogger(logger);
   // Start both the microservice listener and the HTTP server.
   // await app.startAllMicroservices();
-  app.init()
+  // app.init()
   await app.listen(configService.get('port'));
 }
 bootstrap();

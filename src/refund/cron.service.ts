@@ -23,11 +23,11 @@ export class CronService {
     this.env = getEnv(this.configService);
   }
 
-  @Cron(TIMELAPSE_RETRY_REFUND, { timeZone: TIMEZONE_WIB })
-  async retryRefund() {
-    // console.log("retryRefund start")
-    await this.#retry();
-  }
+  // @Cron(TIMELAPSE_RETRY_REFUND, { timeZone: TIMEZONE_WIB })
+  // async retryRefund() {
+  //   // console.log("retryRefund start")
+  //   await this.#retry();
+  // }
 
   async #retry() {
     try {
