@@ -297,9 +297,10 @@ export class RefundService {
 
       const check = await this.repositoryRefund.findOne({
         where: {
-          refundId: payload.reqData.orderId,
+          refundId: payload.reqData.invoice.orderId,
         },
       });
+      console.log(check);
 
       if (!check) {
         throw new Error('Refund not found');
@@ -326,6 +327,7 @@ export class RefundService {
       if (check.rejectReason != null) {
         invoice['comment'] = check.rejectReason;
       }
+      console.log(check.refundStatus);
       invoice['curType'] = '360';
       invoice['fee'] = process.env.DISBURSEMENT_FEE_FIX;
       invoice['mwNo'] = check.id;
