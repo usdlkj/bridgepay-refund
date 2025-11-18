@@ -152,7 +152,7 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
           database: config.get('database.name'),
           autoLoadEntities: true,
           logging: config.get('nodeEnv') === 'development',
-          synchronize: true,
+          // synchronize: true,
         };
       },
     }),
