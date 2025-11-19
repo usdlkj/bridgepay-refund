@@ -126,7 +126,7 @@ export class IlumaService {
         const savePayload =
           await this.repositoryBankData.create(bankDataPayload);
         bankDataRecord = await this.repositoryBankData.save(savePayload);
-        await this.queueService.add(queue, payload.reqData.account.accountNo,{data:payload.reqData.account.accountNo},{delay:600000,jobId:bankDataRecord.id})
+        await this.queueService.add(queue, payload.reqData.account.accountNo,{data:payload.reqData.account.accountNo},{delay:this.configService.get('checkAccountWaitingTIme'),jobId:bankDataRecord.id})
       }
 
       const payloadValidator = {

@@ -18,4 +18,5 @@ export default () => ({
   backdateAccountLastCheck: process.env.BACKDATE_ACCOUNT_LAST_CHECK || 30,
   ticketingApiBaseUrl:
     process.env.TICKETING_API_BASE_URL || 'http://8.210.58.52:9432',
+  checkAccountWaitingTIme:process.env.CHECK_ACCOUNT_WAITING_TIME||600000
 });
