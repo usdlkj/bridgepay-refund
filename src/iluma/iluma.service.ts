@@ -12,6 +12,7 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import * as moment from 'moment-timezone';
 import { BankData } from './entities/bank-data.entity';
+import { QueueService } from 'src/utils/queue.service';
 
 @Injectable()
 export class IlumaService {
@@ -38,12 +39,15 @@ export class IlumaService {
     private readonly yggdrasilService: YggdrasilService,
 
     private configurationService: ConfigurationService,
+    
+    private queueService: QueueService,
   ) {
     this.env = getEnv(this.configService);
   }
 
   async checkAccount(payload) {
     try {
+      let queue = await this.queueService.createQueue('refundCheckAccount');
       let result;
       let status;
       const ilumaCode = await this.repositoryRefundBank.findOne({
@@ -118,9 +122,11 @@ export class IlumaService {
           createdAt: moment().toISOString(),
           updatedAt: moment().toISOString(),
         };
+
         const savePayload =
           await this.repositoryBankData.create(bankDataPayload);
         bankDataRecord = await this.repositoryBankData.save(savePayload);
+        await this.queueService.add(queue, payload.reqData.account.accountNo,{data:payload.reqData.account.accountNo},{delay:600000,jobId:bankDataRecord.id})
       }
 
       const payloadValidator = {
@@ -280,6 +286,7 @@ export class IlumaService {
               updatedAt: moment().toISOString(),
               accountStatus: 'completed',
             });
+            await this.queueService.removeJob(queue,checkData.id)
           }
         } else {
           await this.repositoryBankData.update(bankDataRecord.id, {
@@ -288,7 +295,9 @@ export class IlumaService {
             updatedAt: moment().toISOString(),
             accountStatus: 'completed',
           });
+          await this.queueService.removeJob(queue,bankDataRecord.id)
         }
+        
       } else {
         status = 'failed';
         if (!bankDataRecord) {
@@ -305,6 +314,7 @@ export class IlumaService {
               updatedAt: moment().toISOString(),
               accountStatus: 'completed',
             });
+            await this.queueService.removeJob(queue,checkData.id)
           }
         } else {
           await this.repositoryBankData.update(bankDataRecord.id, {
@@ -313,6 +323,7 @@ export class IlumaService {
             updatedAt: moment().toISOString(),
             accountStatus: 'completed',
           });
+          await this.queueService.removeJob(queue,bankDataRecord.id)
         }
       }
       const sign = await this.helper.sign(JSON.stringify({ status }));

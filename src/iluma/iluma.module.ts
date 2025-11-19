@@ -10,6 +10,7 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
 import { ConfigurationModule } from 'src/configuration/configuration.module';
 import { BankData } from './entities/bank-data.entity';
+import { UtilsModule } from 'src/utils/util.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { BankData } from './entities/bank-data.entity';
     BrokerModule,
     YggdrasilModule,
     ConfigurationModule,
+    UtilsModule
   ],
   providers: [IlumaService, Helper],
   controllers: [IlumaController],

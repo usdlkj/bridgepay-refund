@@ -24,6 +24,8 @@ import { IlumaController } from './iluma/iluma.controller';
 import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
+import { WorkerModule } from './worker/worker.module';
+import redisConfig from './config/redis.config';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
         rabbitmqConfig,
         refundConfig,
         securityConfig,
+        redisConfig,
       ],
     }),
     LoggerModule.forRootAsync({
@@ -163,6 +166,7 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
     PaymentGatewayModule,
     ConfigurationModule,
     ApiLogDebugModule,
+    WorkerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
