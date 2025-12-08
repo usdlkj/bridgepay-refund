@@ -2,9 +2,16 @@ import Hashids from 'hashids';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import * as refundConfig from 'src/config/refund.config';
-const refundEnv = refundConfig.default();
+import { ConfigService } from '@nestjs/config';
+import { ClientProxy } from '@nestjs/microservices';
+import { Logger } from 'nestjs-pino';
+import { lastValueFrom } from 'rxjs';
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
 export class Helper {
+  constructor(private readonly configService: ConfigService) {}
+
   async dtoToJson(data) {
     const stringify = JSON.stringify(data);
     const result = JSON.parse(stringify);
@@ -55,7 +62,9 @@ export class Helper {
   }
 
   async sign(msg) {
-    const filename = refundEnv.refund.keyFilePrivate || 'pgmid';
+    const filename =
+      this.configService.get<string>('refund.keyFilePrivate') || 'pgmid';
+
     const pkey = fs.readFileSync(
       path.join(__dirname, '../../key/' + filename),
       {
@@ -68,8 +77,9 @@ export class Helper {
       key: pkey,
     };
 
-    if (refundEnv.refund.keyFilePrivatePass != '') {
-      signFormat['passphrase'] = refundEnv.refund.keyFilePrivatePass;
+    const pass = this.configService.get<string>('refund.keyFilePrivatePass');
+    if (pass) {
+      signFormat['passphrase'] = pass;
     }
 
     const sign = crypto.createSign('SHA256');
@@ -80,7 +90,8 @@ export class Helper {
   }
 
   async signTicketing(msg) {
-    const filename = refundEnv.refund.keyFilePrivate || 'pgmid';
+    const filename =
+      this.configService.get<string>('refund.keyFilePrivate') || 'pgmid';
     const pkey = fs.readFileSync(
       path.join(__dirname, '../../key/' + filename),
       {
@@ -92,8 +103,9 @@ export class Helper {
       key: pkey,
     };
 
-    if (refundEnv.refund.keyFilePrivatePass != '') {
-      signFormat['passphrase'] = refundEnv.refund.keyFilePrivatePass;
+    const pass = this.configService.get<string>('refund.keyFilePrivatePass');
+    if (pass) {
+      signFormat['passphrase'] = pass;
     }
 
     const sign = crypto.createSign('SHA256');
@@ -146,5 +158,42 @@ export class Helper {
     const maskedSection = '*'.repeat(value.length - unmaskedLength);
     const visibleSection = value.slice(-unmaskedLength);
     return maskedSection + visibleSection;
+  }
+
+  async getXenditCredential(
+    coreService: ClientProxy,
+    logger: Logger,
+    nodeEnv: string,
+  ) {
+    const credentialStr = await this.sendCore(
+      coreService,
+      logger,
+      'get-credential-by-pg-code',
+      { pgCode: 'xendit' },
+      'get xendit credential',
+    );
+    const credentialObj = JSON.parse(credentialStr);
+    return nodeEnv == 'production'
+      ? credentialObj.production
+      : credentialObj.development;
+  }
+
+  private async sendCore(
+    coreService: ClientProxy,
+    logger: Logger,
+    pattern: any,
+    data?: any,
+    label?: string,
+  ) {
+    if (typeof pattern === 'string') {
+      pattern = { cmd: pattern }; // 🔥 auto-fix for legacy calls
+    }
+
+    try {
+      return await lastValueFrom(coreService.send(pattern, data));
+    } catch (err) {
+      logger.error({ err, pattern, label }, '[PublicAPI] core call failed');
+      throw err;
+    }
   }
 }

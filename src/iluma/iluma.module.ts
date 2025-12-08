@@ -7,12 +7,13 @@ import { IlumaCallback } from './entities/iluma-callback.entity';
 import { BrokerModule } from 'src/broker/broker.module';
 import { Helper } from 'src/utils/helper';
 import { RefundBank } from 'src/refund/entities/refund-bank.entity';
-import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
 import { ConfigurationModule } from 'src/configuration/configuration.module';
 import { BankData } from './entities/bank-data.entity';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule,
     TypeOrmModule.forFeature([
       IlumaCallLog,
       IlumaCallback,
@@ -20,11 +21,10 @@ import { BankData } from './entities/bank-data.entity';
       BankData,
     ]),
     BrokerModule,
-    YggdrasilModule,
     ConfigurationModule,
   ],
   providers: [IlumaService, Helper],
   controllers: [IlumaController],
-  exports: [IlumaService],
+  exports: [IlumaService, Helper],
 })
 export class IlumaModule {}

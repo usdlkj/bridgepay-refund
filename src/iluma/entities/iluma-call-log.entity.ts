@@ -5,6 +5,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { ulid } from 'ulid';
 
@@ -29,6 +30,13 @@ export class IlumaCallLog {
 
   @Column({ type: 'jsonb', nullable: true })
   payload: Record<string, any>;
+
+  @Index()
+  @Column()
+  func: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  request: Record<string, any>;
 
   @Column({ type: 'jsonb', nullable: true })
   response: Record<string, any>;

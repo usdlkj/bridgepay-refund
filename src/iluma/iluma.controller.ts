@@ -1,12 +1,13 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { IlumaService } from './iluma.service';
+import { CheckAccountDto } from './dto/check-account.dto';
 
 @Controller('/api/v2')
 export class IlumaController {
   constructor(private readonly ilumaService: IlumaService) {}
 
   @Post('/checkAccount')
-  async checkAccount(@Body() payload: object) {
+  async checkAccount(@Body() payload: CheckAccountDto) {
     return await this.ilumaService.checkAccount(payload);
   }
 

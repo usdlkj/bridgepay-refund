@@ -9,11 +9,11 @@ import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
-import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import axios from 'axios';
+import { Logger } from 'nestjs-pino';
 
 @Injectable()
 export class WebhookService {
@@ -40,15 +40,18 @@ export class WebhookService {
     private configurationService: ConfigurationService,
 
     private yggdrasilService: YggdrasilService,
-
-    private paymentGatewayService: PaymentGatewayService,
+    private readonly logger: Logger,
   ) {
     this.env = getEnv(this.configService);
   }
 
   async xendit(data, callbackToken: string) {
     try {
-      const credential = await this.#getXenditToken();
+      const credential = await this.helper.getXenditCredential(
+        this.coreService,
+        this.logger,
+        this.env,
+      );
       if (callbackToken == credential.callbackToken) {
         const explode = data.external_id.split('-');
         const refundId = explode[0];
@@ -280,16 +283,6 @@ export class WebhookService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
-  }
-
-  async #getXenditToken() {
-    const pgData = await this.paymentGatewayService.findOneLikeName({
-      pgName: 'xendit',
-    });
-    const credentialData = JSON.parse(pgData.credential);
-    // console.log(credentialData);
-    const credential = credentialData[await this.configService.get('nodeEnv')];
-    return credential;
   }
 
   async #notifTicketing(

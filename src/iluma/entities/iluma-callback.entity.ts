@@ -30,6 +30,9 @@ export class IlumaCallback {
   @Column({ type: 'jsonb', nullable: true })
   response: Record<string, any>;
 
+  @Column({ name: 'response_at', type: 'timestamptz', nullable: true })
+  responseAt: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

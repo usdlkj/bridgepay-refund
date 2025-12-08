@@ -13,10 +13,10 @@ import {
 } from './entities/refund.entity';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
-import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { RefundService } from './refund.service';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundLog } from './entities/refund-log.entity';
+import { Logger } from 'nestjs-pino';
 const listType = ['string', 'json', 'number', 'date', 'enum', 'date'];
 const field = [
   'refund_ga_number',
@@ -40,57 +40,97 @@ export class BackofficeService {
     @InjectRepository(Refund)
     private repositoryRefund: Repository<Refund>,
 
-        @InjectRepository(RefundLog)
-        private repositoryRefundLog: Repository<RefundLog>,
-    
-        private readonly configService: ConfigService,
-        private readonly refundService:RefundService,
-        private readonly searchRefundStatus:SearchRefundStatus,
-        private readonly configurationService:ConfigurationService,
-        private readonly yggdrasilService : YggdrasilService,
-        private readonly paymentGatewayService:PaymentGatewayService
-    
-        ) {
-        this.env = getEnv(this.configService);
-        }
-    
-    async list(columns){
-        try{
-            let qb = await this.repositoryRefund.createQueryBuilder('refund');
-            if(columns){
-                for(let row of columns){
-                    let search = row.search.value;
-                    let index = row.data;
-                    if(search!=''){
-                        if(listType[index]=="string"){
-                            qb.andWhere(`"${field[index]}" iLike '%${search}%'`)
-                        }else if(listType[index]=="fixed"){
-                            qb.andWhere(`"${field[index]}" = '${search}'`)
-                        }else if(listType[index]=='number'){
-                            qb.andWhere(`"${field[index]}" = '${search}'`)
-                        }else if(listType[index]=='enum'){
-                            let statusSearch = await this.searchRefundStatus.get(search.toLowerCase());
-                            qb.andWhere(`"${field[index]}" = '${statusSearch}'`)
-                        }else if(listType[index]=='json'){
-                            qb.andWhere(`${field[index]} = '${search}'`)
-                        }else{
-                            let date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
-                            let startDate = date.toISOString();
-                            let endDate = date.add(1, 'day').toISOString();
-                            qb.andWhere(`"${field[index]}" BETWEEN '${startDate}' AND '${endDate}'`)
-                        }
+    @InjectRepository(RefundLog)
+    private repositoryRefundLog: Repository<RefundLog>,
 
-                    }
-                }
-            } 
-            let data = await qb.getMany();
-            return data;
-    
-        }catch(e){
-            throw new HttpException({status:500,message:e.message}, HttpStatus.INTERNAL_SERVER_ERROR) 
+    private readonly configService: ConfigService,
+    private readonly refundService: RefundService,
+    private readonly searchRefundStatus: SearchRefundStatus,
+    private readonly configurationService: ConfigurationService,
+    private readonly yggdrasilService: YggdrasilService,
+    private readonly logger: Logger,
+  ) {
+    this.env = getEnv(this.configService);
+  }
+
+  async list(columns: any) {
+    try {
+      const qb = this.repositoryRefund.createQueryBuilder('refund');
+
+      if (columns && Array.isArray(columns)) {
+        for (let i = 0; i < columns.length; i++) {
+          const row = columns[i];
+          const search = row?.search?.value;
+          const index = row?.data;
+
+          if (!search && search !== 0) {
+            continue;
+          }
+
+          const fieldName = field[index];
+          const type = listType[index];
+          const paramKey = `search_${index}_${i}`;
+
+          if (!fieldName || !type) {
+            continue;
+          }
+
+          if (type === 'string') {
+            qb.andWhere(`${fieldName} ILIKE :${paramKey}`, {
+              [paramKey]: `%${search}%`,
+            });
+          } else if (type === 'fixed') {
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: search,
+            });
+          } else if (type === 'number') {
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: Number(search),
+            });
+          } else if (type === 'enum') {
+            const statusSearch = await this.searchRefundStatus.get(
+              String(search).toLowerCase(),
+            );
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: statusSearch,
+            });
+          } else if (type === 'json') {
+            // For JSON fields, keep equality but still parameterized
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: search,
+            });
+          } else if (type === 'date') {
+            const date = moment.tz(
+              String(search),
+              'DD-MM-YYYY',
+              'Asia/Jakarta',
+            );
+            if (!date.isValid()) {
+              continue;
+            }
+            const startDate = date.startOf('day').toISOString();
+            const endDate = date.endOf('day').toISOString();
+
+            qb.andWhere(
+              `${fieldName} BETWEEN :start_${paramKey} AND :end_${paramKey}`,
+              {
+                [`start_${paramKey}`]: startDate,
+                [`end_${paramKey}`]: endDate,
+              },
+            );
+          }
         }
-        
+      }
+
+      const data = await qb.getMany();
+      return data;
+    } catch (e) {
+      throw new HttpException(
+        { status: 500, message: e.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
+  }
 
   async view(id) {
     const refund = await this.repositoryRefund
@@ -181,7 +221,14 @@ export class BackofficeService {
       await this.repositoryRefund.update(check.id, {
         requestData: generatePayload.requestData,
       });
-      const credential = await this.#getXenditToken();
+
+      // get xendit credential from bridgepay-core
+      const credential = await this.helper.getXenditCredential(
+        this.coreService,
+        this.logger,
+        this.env,
+      );
+
       const payloadDisbursement = {
         provider: 'xendit',
         func: 'disbursement',
@@ -205,36 +252,72 @@ export class BackofficeService {
 
   async refundLog(columns) {
     try {
-      const qb = await this.repositoryRefundLog.createQueryBuilder('refundLog');
-      if (columns) {
-        for (const row of columns) {
-          const search = row.search.value;
-          const index = row.data;
-          if (search != '') {
-            if (listTypeLog[index] == 'string') {
-              qb.andWhere(`"${fieldLog[index]}" iLike '%${search}%'`);
-            } else if (listTypeLog[index] == 'fixed') {
-              qb.andWhere(`"${fieldLog[index]}" = '${search}'`);
-            } else if (listTypeLog[index] == 'number') {
-              qb.andWhere(`"${fieldLog[index]}" = '${search}'`);
-            } else if (listTypeLog[index] == 'enum') {
-              const statusSearch = await this.searchRefundStatus.get(
-                search.toLowerCase(),
-              );
-              qb.andWhere(`"${fieldLog[index]}" = '${statusSearch}'`);
-            } else if (listTypeLog[index] == 'json') {
-              qb.andWhere(`${fieldLog[index]} = '${search}'`);
-            } else {
-              const date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
-              const startDate = date.toISOString();
-              const endDate = date.add(1, 'day').toISOString();
-              qb.andWhere(
-                `"${fieldLog[index]}" BETWEEN '${startDate}' AND '${endDate}'`,
-              );
+      const qb = this.repositoryRefundLog.createQueryBuilder('refundLog');
+
+      if (columns && Array.isArray(columns)) {
+        for (let i = 0; i < columns.length; i++) {
+          const row = columns[i];
+          const search = row?.search?.value;
+          const index = row?.data;
+
+          if (!search && search !== 0) {
+            continue;
+          }
+
+          const fieldName = fieldLog[index];
+          const type = listTypeLog[index];
+          const paramKey = `log_${index}_${i}`;
+
+          if (!fieldName || !type) {
+            continue;
+          }
+
+          if (type === 'string') {
+            qb.andWhere(`${fieldName} ILIKE :${paramKey}`, {
+              [paramKey]: `%${search}%`,
+            });
+          } else if (type === 'fixed') {
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: search,
+            });
+          } else if (type === 'number') {
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: Number(search),
+            });
+          } else if (type === 'enum') {
+            const statusSearch = await this.searchRefundStatus.get(
+              String(search).toLowerCase(),
+            );
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: statusSearch,
+            });
+          } else if (type === 'json') {
+            qb.andWhere(`${fieldName} = :${paramKey}`, {
+              [paramKey]: search,
+            });
+          } else if (type === 'date') {
+            const date = moment.tz(
+              String(search),
+              'DD-MM-YYYY',
+              'Asia/Jakarta',
+            );
+            if (!date.isValid()) {
+              continue;
             }
+            const startDate = date.startOf('day').toISOString();
+            const endDate = date.endOf('day').toISOString();
+
+            qb.andWhere(
+              `${fieldName} BETWEEN :start_${paramKey} AND :end_${paramKey}`,
+              {
+                [`start_${paramKey}`]: startDate,
+                [`end_${paramKey}`]: endDate,
+              },
+            );
           }
         }
       }
+
       const data = await qb.getMany();
       return data;
     } catch (e) {
@@ -244,12 +327,4 @@ export class BackofficeService {
       );
     }
   }
-
-    async #getXenditToken(){
-        const pgData = await this.paymentGatewayService.findOneLikeName({pgName:'xendit'})
-        const credentialData = JSON.parse(pgData.credential);
-        // console.log(credentialData);
-        const credential = credentialData[await this.configService.get('nodeEnv')];
-        return credential
-      }
 }

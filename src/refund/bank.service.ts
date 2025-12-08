@@ -1,4 +1,4 @@
-import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus, Inject } from '@nestjs/common';
 import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
@@ -11,7 +11,10 @@ import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { Logger } from 'nestjs-pino';
+import { Payout as PayoutClient } from 'xendit-node';
+import { Channel, ChannelCategory } from 'xendit-node/payout/models';
 const listType = ['string', 'string', 'fixed'];
 const field = ['bank_name', 'xendit_code', 'bank_status'];
 
@@ -20,19 +23,19 @@ export class BankService {
   private env: string;
 
   constructor(
-    private helper: Helper,
+    @Inject('RefundToCoreClient')
+    private readonly coreService: ClientProxy,
+    private readonly configService: ConfigService,
+    private readonly logger: Logger,
 
+    private helper: Helper,
     @InjectRepository(RefundBank)
     private repositoryRefundBank: Repository<RefundBank>,
     private searchBankStatus: SearchBankStatus,
-
     @InjectRepository(IlumaCallLog)
     private repositoryCallLog: Repository<IlumaCallLog>,
 
-    private readonly configService: ConfigService,
-
     private readonly yggdrasilService: YggdrasilService,
-    private readonly paymentGatewayService: PaymentGatewayService,
   ) {
     this.env = getEnv(this.configService);
   }
@@ -92,7 +95,8 @@ export class BankService {
 
   async bankSync() {
     try {
-      this.#bankProviderSync();
+      await this.xenditSync();
+      await this.ilumaSync();
       const result = {
         status: 200,
         message: 'Success',
@@ -106,96 +110,87 @@ export class BankService {
     }
   }
 
-  async #bankProviderSync() {
-    await this.#xenditSync();
-    await this.#ilumaSync();
-  }
-
-  async #xenditSync() {
+  /**
+   * This function will synchronize bank data from Xendit to local database
+   * @returns void
+   */
+  private async xenditSync() {
     try {
-      const credential = await this.#getXenditToken();
-      const payload = {
-        provider: 'xendit',
-        func: 'bank-list',
-        token: credential.secretKey,
-      };
-      const xendit = await this.yggdrasilService.refund(payload);
-      if (xendit.status != 200) {
-        throw new Error(xendit.data);
-      } else {
-        const result = [];
-        // xendit.data.map(async function(value,index){
+      const credential = await this.helper.getXenditCredential(
+        this.coreService,
+        this.logger,
+        this.env,
+      );
+      const xenditPayoutClient = new PayoutClient({
+        secretKey: credential.secretKey,
+      });
+      const payoutChannels: Channel[] =
+        await xenditPayoutClient.getPayoutChannels({
+          currency: 'IDR',
+          channelCategory: [ChannelCategory.Bank],
+        });
 
-        // })
-        for (const value of xendit.data) {
-          const temp = {
-            bankName: value.name,
-            xenditCode: value.code.trim(),
-            xenditData: value,
-          };
-          const _where = {
-            where: {
-              xenditCode: value.code.trim(),
-            },
-          };
-          const upsert = await this.#bankUpsert(_where, temp);
-          if (upsert.status == 500) {
-            result.push(`xenditCode ${value.code} : ${upsert.msg}`);
-          }
-        }
-        // if(result.length >0){
-        //     log.cronlog(JSON.stringify(result))
-        // }else{
-        //     log.cronlog("Xendit bank data synced")
-        // }
-        return 'OK';
+      // upsert into refund_banks table
+      for (const channel of payoutChannels) {
+        const where = {
+          where: {
+            xenditCode: channel.channelCode.trim(),
+          },
+        };
+        const payload = {
+          bankName: channel.channelName,
+          xenditCode: channel.channelCode.trim(),
+          xenditData: channel,
+          bankStatus: 'disable',
+        };
+        await this.bankUpsert(where, payload);
       }
     } catch (e) {
-      throw new HttpException(
-        { status: 500, message: e.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      this.logger.error(`xenditSync error: ${e.message}`);
+      throw e;
     }
   }
 
-  async #ilumaSync() {
+  private async ilumaSync() {
     try {
+      // Get bank data from Iluma
       const payload = {
         provider: 'iluma',
         func: 'bank-list',
-        credential: this.configService.get('ilumaToken'),
+        credential: this.configService.get('iluma.token'),
       };
       const iluma = await this.yggdrasilService.refund(payload);
+
+      // Store Iluma call log to database
       const payloadLog = {
         url: 'https://api.iluma.ai/bank/available_bank_codes',
         payload: null,
         method: 'get',
+        func: 'yggdrasilService.refund',
         response: iluma,
         createdAt: moment().toISOString(),
         updatedAt: moment().toISOString(),
       };
-      const payloadLogSave = await this.repositoryCallLog.create(payloadLog);
+      const payloadLogSave = this.repositoryCallLog.create(payloadLog);
       await this.repositoryCallLog.save(payloadLogSave);
+
+      // Update refund_banks table with Iluma bank code and data
       if (iluma.status != 200) {
         throw new Error(iluma.msg);
       } else {
-        const result = [];
-        for (const value of iluma.data) {
-          const _where = {
-            where: {
-              xenditCode: value.code.trim(),
-            },
-          };
-          const check = await this.repositoryRefundBank.findOne(_where);
+        for (const ilumaData of iluma.data) {
+          const check = await this.repositoryRefundBank.findOne({
+            where: { bankName: ilumaData.name.trim() },
+          });
           if (check) {
             const data = {
-              ilumaCode: value.code.trim(),
-              ilumaData: value,
+              ilumaCode: ilumaData.code.trim(),
+              ilumaData,
             };
             await this.repositoryRefundBank.update(check.id, data);
           } else {
-            result.push(
-              `iluma ${value.code} : cant mapping to xendit bank data`,
+            this.logger.warn(
+              `Iluma bank ${ilumaData.name} not found in refund_banks table`,
             );
           }
         }
@@ -209,17 +204,16 @@ export class BankService {
     }
   }
 
-  async #bankUpsert(where: object, payload: object) {
+  private async bankUpsert(where: object, payload: object) {
     try {
       const check = await this.repositoryRefundBank.findOne(where);
-      // console.log(check);
       if (check) {
         payload['updatedAt'] = moment().toISOString();
         await this.repositoryRefundBank.update(check.id, payload);
       } else {
         payload['createdAt'] = moment().toISOString();
         payload['updatedAt'] = moment().toISOString();
-        const payloadSave = await this.repositoryRefundBank.create(payload);
+        const payloadSave = this.repositoryRefundBank.create(payload);
         await this.repositoryRefundBank.save(payloadSave);
       }
       return {
@@ -232,14 +226,5 @@ export class BankService {
         msg: e.message,
       };
     }
-  }
-
-  async #getXenditToken() {
-    const pgData = await this.paymentGatewayService.findOneLikeName({
-      pgName: 'xendit',
-    });
-    const credentialData = JSON.parse(pgData.credential);
-    const credential = credentialData[await this.configService.get('nodeEnv')];
-    return credential;
   }
 }

@@ -9,13 +9,13 @@ import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
 import { RefundLog } from './entities/refund-log.entity';
 import { TicketingCallLog } from './entities/ticketing-call-log.entity';
-import { PaymentGatewayService } from 'src/payment-gateway/payment-gateway.service';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, Not } from 'typeorm';
 import axios from 'axios';
+import { Logger } from 'nestjs-pino';
 
 @Injectable()
 export class RefundService {
@@ -48,8 +48,7 @@ export class RefundService {
     private configurationService: ConfigurationService,
 
     private yggdrasilService: YggdrasilService,
-
-    private paymentGatewayService: PaymentGatewayService,
+    private readonly logger: Logger,
   ) {
     this.env = getEnv(this.configService);
   }
@@ -64,7 +63,11 @@ export class RefundService {
         ticketingCall = 1;
       }
 
-      const credential = await this.#getXenditToken();
+      const credential = await this.helper.getXenditCredential(
+        this.coreService,
+        this.logger,
+        this.env,
+      );
       const check = await this.repositoryRefund.findOne({
         where: {
           refundId: payload.reqData.invoice.orderId,
@@ -216,7 +219,7 @@ export class RefundService {
         });
 
         const { requestData, payloadRefund } =
-          await this.#generateXenditRefundPayload(refund);
+          await this.generateXenditRefundPayload(refund);
 
         await this.repositoryRefund.update(refund.id, {
           requestData: requestData,
@@ -293,7 +296,11 @@ export class RefundService {
 
   async status(payload) {
     try {
-      const credential = await this.#getXenditToken();
+      const credential = await this.helper.getXenditCredential(
+        this.coreService,
+        this.logger,
+        this.env,
+      );
 
       const check = await this.repositoryRefund.findOne({
         where: {
@@ -395,21 +402,7 @@ export class RefundService {
     }
   }
 
-  async generateXenditRefundPayload(refund: object) {
-    return await this.#generateXenditRefundPayload(refund);
-  }
-
-  async #getXenditToken() {
-    const pgData = await this.paymentGatewayService.findOneLikeName({
-      pgName: 'xendit',
-    });
-    const credentialData = JSON.parse(pgData.credential);
-    // console.log(credentialData);
-    const credential = credentialData[await this.configService.get('nodeEnv')];
-    return credential;
-  }
-
-  async #generateXenditRefundPayload(refund) {
+  async generateXenditRefundPayload(refund: Refund) {
     const refundData = refund.refundData;
     const refundBankData = refund.refundBankData;
     const refundAmountData = refund.refundAmountData;

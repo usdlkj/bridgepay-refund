@@ -3,5 +3,7 @@ export default () => ({
     url: process.env.RABBITMQ_URL || 'amqp://localhost:5672',
     refundQueue: process.env.RABBITMQ_QUEUE || 'bridgepay-refund',
     coreQueue: process.env.RABBITMQ_CORE_QUEUE || 'bridgepay-core',
+    encryptorQueue:
+      process.env.RABBITMQ_ENCRYPTOR_QUEUE || 'bridgepay-encryptor',
   },
 });

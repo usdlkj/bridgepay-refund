@@ -5,37 +5,60 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { ulid } from 'ulid';
 
 @Entity('bank_datas')
+@Index(['bankCode', 'accountNumberHash'], { unique: true })
 export class BankData {
   @PrimaryColumn()
   id: string;
+
+  // Bank code (e.g., Xendit bank code)
+  @Column({ name: 'bank_code', type: 'varchar', nullable: false })
+  bankCode: string;
 
   @BeforeInsert()
   generateId() {
     this.id = ulid();
   }
 
-  @Column({ name: 'account_number' })
-  accountNumber: string;
+  // Encrypted value (never plaintext)
+  @Column({ name: 'account_number_enc', type: 'jsonb', nullable: true })
+  accountNumberEnc: any;
+
+  // Hash of account number for search
+  @Column({ name: 'account_number_hash', nullable: false, type: 'varchar' })
+  accountNumberHash: string;
+
+  @Column({ name: 'request_id', type: 'varchar', nullable: true })
+  requestId: string;
 
   @Column({
-    enum: ['pending', 'completed'],
+    type: 'enum',
+    enum: ['pending', 'completed', 'expired'],
     name: 'account_status',
   })
   accountStatus: string;
 
   @Column({
+    type: 'enum',
+    enum: ['success', 'failed', 'pending'],
     name: 'account_result',
-    enum: ['success', 'failed'],
     nullable: true,
   })
   accountResult: string;
 
   @Column({ type: 'jsonb', nullable: true, name: 'iluma_data' })
-  ilumaData: Record<string, any>;
+  ilumaData: any;
+
+  // Extracted fields for operational failure diagnostics
+  @Column({ name: 'failure_code', type: 'varchar', nullable: true })
+  failureCode?: string;
+
+  @Column({ name: 'failure_message', type: 'text', nullable: true })
+  failureMessage?: string;
 
   @Column({ name: 'last_check_at', type: 'timestamptz', nullable: true })
   lastCheckAt: Date;

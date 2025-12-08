@@ -5,7 +5,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+
     ClientsModule.registerAsync([
+      // ----------------------------
+      // Refund → Core Client
+      // ----------------------------
       {
         name: 'RefundToCoreClient',
         imports: [ConfigModule],
@@ -16,7 +20,30 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             urls: [
               config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
             ],
-            queue: config.get<string>('rabbitmq.') || 'bridgepay-core',
+            queue: config.get<string>('rabbitmq.coreQueue') ?? 'bridgepay-core',
+            queueOptions: {
+              durable: true,
+            },
+          },
+        }),
+      },
+
+      // ----------------------------
+      // Refund → Encryptor Client
+      // ----------------------------
+      {
+        name: 'RefundToEncryptorClient',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
+            ],
+            queue:
+              config.get<string>('rabbitmq.encryptorQueue') ??
+              'bridgepay-encryptor',
             queueOptions: {
               durable: true,
             },

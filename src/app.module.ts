@@ -1,6 +1,5 @@
 import { ReportModule } from './report/report.module';
-import { ScheduleModule } from '@nestjs/schedule';
-import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -13,29 +12,69 @@ import KeyvRedis from '@keyv/redis';
 import { isDevOrTest } from './utils/env.utils';
 import { IlumaModule } from './iluma/iluma.module';
 import { RefundModule } from './refund/refund.module';
+import { ConfigurationModule } from './configuration/configuration.module';
+import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
+import { readFileSync } from 'fs';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import rabbitmqConfig from './config/rabbitmq.config';
 import refundConfig from './config/refund.config';
-import securityConfig from './config/security.config';
-import { RefundMiddleware } from './refund/refund.middleware';
-import { RefundController } from './refund/refund.controller';
-import { IlumaController } from './iluma/iluma.controller';
-import { PaymentGatewayModule } from './payment-gateway/payment-gateway.module';
-import { ConfigurationModule } from './configuration/configuration.module';
-import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
 
+const resolveReaderDbConfig = (config: ConfigService) => {
+  const hasReplicaConfig =
+    config.get('reader.host') &&
+    config.get('reader.username') &&
+    config.get('reader.password');
+
+  if (!hasReplicaConfig) {
+    console.warn(
+      '[TypeORM] Read replica config missing; using primary DB for reader connection',
+    );
+  }
+
+  return {
+    host: hasReplicaConfig
+      ? config.get('reader.host')
+      : config.get('database.host'),
+    port: hasReplicaConfig
+      ? config.get<number>('reader.port')
+      : config.get<number>('database.port'),
+    username: hasReplicaConfig
+      ? config.get('reader.username')
+      : config.get('database.username'),
+    password: hasReplicaConfig
+      ? config.get('reader.password')
+      : config.get('database.password'),
+  };
+};
+
+const loadDbSsl = (config: ConfigService) => {
+  const isProd = ['staging', 'production'].includes(
+    config.get<string>('nodeEnv') || '',
+  );
+  if (!isProd) return undefined;
+
+  const caPath = config.get<string>('database.caPath');
+  if (!caPath) return { rejectUnauthorized: false };
+
+  try {
+    const ca = readFileSync(caPath);
+    return {
+      rejectUnauthorized: false,
+      ca,
+    };
+  } catch {
+    console.warn(
+      `Could not read Database CA at ${caPath}; proceeding without custom CA`,
+    );
+    return { rejectUnauthorized: false };
+  }
+};
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [
-        appConfig,
-        databaseConfig,
-        rabbitmqConfig,
-        refundConfig,
-        securityConfig,
-      ],
+      load: [appConfig, databaseConfig, rabbitmqConfig, refundConfig],
     }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
@@ -59,7 +98,7 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
                 ? {
                     target: 'pino-rotate',
                     options: {
-                      file: `${logsFolder}/bridgepay-core-%YYYY-MM-DD%.log`,
+                      file: `${logsFolder}/bridgepay-refund-%YYYY-MM-DD%.log`,
                       limit: '7d',
                     },
                   }
@@ -119,30 +158,6 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const isProd = ['staging', 'production'].includes(
-          config.get<string>('nodeEnv') || '',
-        );
-
-        if (isProd) {
-          return {
-            type: 'postgres',
-            replication: {
-              defaultMode: config.get('database.replication.defaultMode'),
-              master: {
-                host: config.get('database.master.host'),
-                port: config.get<number>('database.master.port'),
-                username: config.get('database.master.username'),
-                password: config.get('database.master.password'),
-                database: config.get('database.name'),
-              },
-              slaves: config.get('database.replicas'),
-            },
-            autoLoadEntities: true,
-            logging: false,
-          };
-        }
-
-        // fallback for dev/local
         return {
           type: 'postgres',
           host: config.get('database.host'),
@@ -151,35 +166,45 @@ import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
           password: config.get('database.password'),
           database: config.get('database.name'),
           autoLoadEntities: true,
-          logging: config.get('nodeEnv') === 'development',
-          // synchronize: true,
+          logging: false,
+          ssl: loadDbSsl(config),
+          synchronize: true,
         };
       },
     }),
-    ScheduleModule.forRoot(),
+
+    // For replication / read-only queries (only in production)
+    ...(process.env.NODE_ENV === 'production'
+      ? [
+          TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: async (config: ConfigService) => {
+              const readerDb = resolveReaderDbConfig(config);
+              return {
+                type: 'postgres',
+                host: readerDb.host,
+                port: readerDb.port,
+                username: readerDb.username,
+                password: readerDb.password,
+                database: config.get('database.name'),
+                autoLoadEntities: true,
+                logging: false,
+                name: 'reader',
+                ssl: loadDbSsl(config),
+                synchronize: true,
+              };
+            },
+          }),
+        ]
+      : []),
     IlumaModule,
     RefundModule,
     ReportModule,
-    PaymentGatewayModule,
     ConfigurationModule,
     ApiLogDebugModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(RefundMiddleware)
-      .exclude({ path: '/api/v2/bankCodes', method: RequestMethod.GET })
-      .exclude({
-        path: '/api/v2/webhook/iluma/bank-validator',
-        method: RequestMethod.POST,
-      })
-      .exclude({
-        path: '/api/v2/webhook/xendit/disbursement',
-        method: RequestMethod.POST,
-      })
-      .forRoutes(RefundController, IlumaController); // Applies middleware to all routes in PostsController
-  }
-}
+export class AppModule {}
