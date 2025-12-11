@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { BankService } from './bank.service';
+import { UpdateRefundBankDto } from './dto/update-refund-bank.dto';
 
 @Controller('/api/v2/banks')
 export class BankController {
@@ -24,7 +25,7 @@ export class BankController {
   @Post('/:id')
   async banksUpdate(
     @Param('id') id: string,
-    @Body() payload: { bankStatus: 'enable' | 'disable' },
+    @Body() payload: UpdateRefundBankDto,
   ) {
     return this.bankService.update(id, payload);
   }

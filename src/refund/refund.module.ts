@@ -10,7 +10,6 @@ import { BrokerModule } from 'src/broker/broker.module';
 import { Helper } from 'src/utils/helper';
 import { BackofficeService } from './backoffice.service';
 import { WebhookService } from './webhook.service';
-import { CronService } from './cron.service';
 import { BankService } from './bank.service';
 import { BankController } from './bank.controller';
 import { BackofficeController } from './backoffice.controller';
@@ -22,6 +21,8 @@ import { ApiLogDebugModule } from 'src/api-log-debug/api-log-debug.module';
 import { RefundLog } from './entities/refund-log.entity';
 import { TicketingCallLog } from './entities/ticketing-call-log.entity';
 import { EncryptorClient } from '../utils/encryptor.client';
+import { BankData } from 'src/iluma/entities/bank-data.entity';
+import { RefundWebhookCall } from './entities/refund-webhook-call.entity';
 
 @Module({
   imports: [
@@ -33,6 +34,8 @@ import { EncryptorClient } from '../utils/encryptor.client';
       IlumaCallLog,
       RefundLog,
       TicketingCallLog,
+      BankData,
+      RefundWebhookCall,
     ]),
     BrokerModule,
     ConfigurationModule,
@@ -44,7 +47,6 @@ import { EncryptorClient } from '../utils/encryptor.client';
     Helper,
     BackofficeService,
     WebhookService,
-    CronService,
     BankService,
     SearchBankStatus,
     SearchRefundStatus,

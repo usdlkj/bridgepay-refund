@@ -7,8 +7,11 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { Refund, RefundStatus } from './entities/refund.entity';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
+import { RefundWebhookCall } from './entities/refund-webhook-call.entity';
+import { XenditWebhookDto } from './dto/xendit-webhook.dto';
 import { ConfigurationService } from 'src/configuration/configuration.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
+import { maskAccountNumber } from 'src/utils/mask.util';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
@@ -35,6 +38,9 @@ export class WebhookService {
     @InjectRepository(RefundDetailTicket)
     private repositoryRefundDetailTicket: Repository<RefundDetailTicket>,
 
+    @InjectRepository(RefundWebhookCall)
+    private repositoryRefundWebhookCall: Repository<RefundWebhookCall>,
+
     private readonly configService: ConfigService,
 
     private configurationService: ConfigurationService,
@@ -45,40 +51,106 @@ export class WebhookService {
     this.env = getEnv(this.configService);
   }
 
-  async xendit(data, callbackToken: string) {
+  private sanitizeCallbackData(data: any) {
+    try {
+      const cloned = JSON.parse(JSON.stringify(data));
+      if (cloned?.channel_properties?.account_number) {
+        cloned.channel_properties.account_number = maskAccountNumber(
+          cloned.channel_properties.account_number,
+        );
+      }
+      if (cloned?.channel_properties?.accountNo) {
+        cloned.channel_properties.accountNo = maskAccountNumber(
+          cloned.channel_properties.accountNo,
+        );
+      }
+      return cloned;
+    } catch {
+      return data;
+    }
+  }
+
+  private sanitizeWebhookPayload(payload: any) {
+    try {
+      const cloned = JSON.parse(JSON.stringify(payload));
+      if (cloned?.data?.channel_properties?.account_number) {
+        cloned.data.channel_properties.account_number = maskAccountNumber(
+          cloned.data.channel_properties.account_number,
+        );
+      }
+      return cloned;
+    } catch {
+      return payload;
+    }
+  }
+
+  async xendit(
+    payload: XenditWebhookDto,
+    callbackToken: string,
+    rawPayload: any = null,
+  ) {
     try {
       const credential = await this.helper.getXenditCredential(
         this.coreService,
         this.logger,
         this.env,
       );
-      if (callbackToken == credential.callbackToken) {
-        const explode = data.external_id.split('-');
-        const refundId = explode[0];
-        const _where = {
-          where: {
-            refundId: refundId,
-            refundStatus: In(['pendingDisbursement', 'retry']),
+      if (callbackToken != credential.callbackToken) {
+        this.logger.error('Webhook token mismatch');
+        throw new HttpException(
+          {
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+            message: 'Callback Token mismatch',
           },
-        };
-        const check = await this.repositoryRefund.findOne(_where);
-        if (check) {
-          let failCode = null;
-          if (data.status.toLowerCase() == 'failed') {
-            failCode = data.failure_code;
-          }
-          //pgCallback
-          const pgCallback = check.pgCallback ? check.pgCallback : [];
-          const payload = {
-            pgSource: 'xendit',
-            callbackStatus: data.status.toLowerCase(),
-            failCode: failCode,
-            pgCallback: data,
-            createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
-          };
-          pgCallback.push(payload);
-          //end pgCallback
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
 
+      const payloadToStore = rawPayload || payload;
+      const payout = payload.data;
+      if (!payout) {
+        this.logger.error('Invalid payload: missing data');
+        throw new HttpException(
+          {
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+            message: 'Invalid payload: missing data',
+          },
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      const payoutStatus = payout.status?.toLowerCase();
+      const referenceId = payout.reference_id;
+      if (!referenceId) {
+        this.logger.error('Invalid payload: missing reference_id');
+        throw new HttpException(
+          {
+            status: HttpStatus.INTERNAL_SERVER_ERROR,
+            message: 'Invalid payload: missing reference_id (order number)',
+          },
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+      const disbursementId = payout.id;
+      const refundId = referenceId;
+      const _where = {
+        where: {
+          refundId: refundId,
+          refundStatus: In(['pendingDisbursement', 'retry']),
+        },
+      };
+
+      try {
+        const check = await this.repositoryRefund.findOne(_where);
+        const sanitizedWebhookPayload =
+          this.sanitizeWebhookPayload(payloadToStore);
+        const webhookLog = this.repositoryRefundWebhookCall.create({
+          refund: check || null,
+          refundRef: refundId,
+          source: 'xendit',
+          payload: sanitizedWebhookPayload,
+        });
+        await this.repositoryRefundWebhookCall.save(webhookLog);
+        if (check) {
           //get balance data
           const balancePayload = {
             provider: 'xendit',
@@ -88,11 +160,23 @@ export class WebhookService {
           const balance = await this.yggdrasilService.refund(balancePayload);
           //end get balance data
 
-          if (data.status.toLowerCase() == 'completed') {
+          const isSuccess = payoutStatus === 'succeeded';
+          const isInProgress =
+            payoutStatus === 'accepted' ||
+            payoutStatus === 'requested' ||
+            payoutStatus === 'pending' ||
+            payoutStatus === 'queued';
+          const isFailure =
+            payoutStatus === 'failed' ||
+            payoutStatus === 'cancelled' ||
+            payoutStatus === 'reversed';
+
+          if (isSuccess) {
             const refundDate = moment().format('YYYY-MM-DD HH:mm:ss');
             await this.repositoryRefund.update(check.id, {
               refundStatus: RefundStatus.SUCCESS,
-              pgCallback: pgCallback,
+              disbursementId: disbursementId ?? check.disbursementId,
+              disbursementResponse: this.sanitizeCallbackData(payout),
               refundDate: refundDate,
               updatedAt: moment().toISOString(),
             });
@@ -102,8 +186,9 @@ export class WebhookService {
             payload['balance'] = balance.data.balance;
             payload['bankCode'] =
               '' + check.refundData.reqData.account.bankId + '';
-            payload['bankNo'] =
-              '' + check.refundData.reqData.account.accountNo + '';
+            payload['bankNo'] = maskAccountNumber(
+              '' + check.refundData.reqData.account.accountNo + '',
+            );
             payload['curType'] = '360';
             payload['fee'] = check.refundAmountData.fee;
             payload['mwNo'] = '' + check.id + '';
@@ -115,7 +200,9 @@ export class WebhookService {
               '' + (await this.helper.statusWording('success')) + '';
             payload['tradeTime'] =
               '' +
-              moment(data.updated).tz('Asia/Jakarta').format('YYYYMMDDHHmmss') +
+              moment(payout.updated)
+                .tz('Asia/Jakarta')
+                .format('YYYYMMDDHHmmss') +
               '';
             const sign = await this.helper.sign(JSON.stringify({ payload }));
             const tickectingPayload = {
@@ -130,18 +217,17 @@ export class WebhookService {
               check.notifLog,
               'success',
             );
-          } else if (data.status.toLowerCase() == 'pending') {
+          } else if (isInProgress) {
             await this.repositoryRefund.update(check.id, {
-              pgCallback: pgCallback,
               updatedAt: moment().toISOString(),
             });
-          } else {
+          } else if (isFailure) {
             if (
-              data.failure_code.toUpperCase() == 'INVALID_DESTINATION' ||
-              data.failure_code.toUpperCase() == 'REJECTED_BY_BANK' ||
-              data.failure_code.toUpperCase() == 'TRANSFER_ERROR' ||
-              data.failure_code.toUpperCase() == 'EMPTY_ACCOUNT_NAME' ||
-              data.failure_code.toUpperCase() == 'REJECTED_BY_CHANNEL'
+              payout.failure_code?.toUpperCase() == 'INVALID_DESTINATION' ||
+              payout.failure_code?.toUpperCase() == 'REJECTED_BY_BANK' ||
+              payout.failure_code?.toUpperCase() == 'TRANSFER_ERROR' ||
+              payout.failure_code?.toUpperCase() == 'EMPTY_ACCOUNT_NAME' ||
+              payout.failure_code?.toUpperCase() == 'REJECTED_BY_CHANNEL'
             ) {
               const payload = {};
               const payloadSign = {};
@@ -149,8 +235,9 @@ export class WebhookService {
               payload['balance'] = balance.data.balance;
               payload['bankCode'] =
                 '' + check.refundData.reqData.account.bankId + '';
-              payload['bankNo'] =
-                '' + check.refundData.reqData.account.accountNo + '';
+              payload['bankNo'] = maskAccountNumber(
+                '' + check.refundData.reqData.account.accountNo + '',
+              );
               payload['curType'] = '360';
               payload['fee'] = '';
               payload['mwNo'] = '' + check.id + '';
@@ -165,8 +252,9 @@ export class WebhookService {
               payloadSign['balance'] = balance.data.balance;
               payloadSign['bankCode'] =
                 '' + check.refundData.reqData.account.bankId + '';
-              payloadSign['bankNo'] =
-                '' + check.refundData.reqData.account.accountNo + '';
+              payloadSign['bankNo'] = maskAccountNumber(
+                '' + check.refundData.reqData.account.accountNo + '',
+              );
               payloadSign['curType'] = '360';
               payloadSign['mwNo'] = '' + check.id + '';
               payloadSign['orderId'] = '' + check.refundId + '';
@@ -184,7 +272,6 @@ export class WebhookService {
                 check.id,
                 check.notifLog,
                 'fail',
-                pgCallback,
               );
             } else {
               const tryCount =
@@ -206,8 +293,9 @@ export class WebhookService {
                 payload['balance'] = balance.data.balance;
                 payload['bankCode'] =
                   '' + check.refundData.reqData.account.bankId + '';
-                payload['bankNo'] =
-                  '' + check.refundData.reqData.account.accountNo + '';
+                payload['bankNo'] = maskAccountNumber(
+                  '' + check.refundData.reqData.account.accountNo + '',
+                );
                 payload['curType'] = '360';
                 payload['fee'] = '';
                 payload['mwNo'] = '' + check.id + '';
@@ -222,8 +310,9 @@ export class WebhookService {
                 payloadSign['balance'] = balance.data.balance;
                 payloadSign['bankCode'] =
                   '' + check.refundData.reqData.account.bankId + '';
-                payloadSign['bankNo'] =
-                  '' + check.refundData.reqData.account.accountNo + '';
+                payloadSign['bankNo'] = maskAccountNumber(
+                  '' + check.refundData.reqData.account.accountNo + '',
+                );
                 payloadSign['curType'] = '360';
                 payloadSign['mwNo'] = '' + check.id + '';
                 payloadSign['orderId'] = '' + check.refundId + '';
@@ -243,7 +332,6 @@ export class WebhookService {
                   check.id,
                   check.notifLog,
                   'fail',
-                  pgCallback,
                 );
               } else {
                 const tyrPeriod =
@@ -263,23 +351,26 @@ export class WebhookService {
                   .toISOString();
                 await this.repositoryRefund.update(check.id, {
                   refundStatus: RefundStatus.FAIL,
-                  pgCallback: pgCallback,
                   retryDate: retryDate,
                 });
               }
             }
           }
-          return { message: 'OK' };
-        } else {
-          throw new Error('refundId not found');
         }
-      } else {
-        throw new Error('Callback Token mismatch');
+      } catch (err) {
+        this.logger.error('Webhook processing error', {
+          err: err instanceof Error ? err.message : String(err),
+          payoutId: disbursementId,
+          referenceId,
+        });
       }
+      return { message: 'OK' };
     } catch (e) {
-      console.log(e);
       throw new HttpException(
-        { status: 500, message: 'failed handle webhook' },
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'failed handle webhook',
+        },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -291,15 +382,29 @@ export class WebhookService {
     refundId,
     notifLogData,
     type: 'success' | 'fail',
-    pgCallback = null,
   ) {
     //notif ticketing
     const notifDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    const notif = await axios({
-      url: refundData.reqData.invoice.notifyUrl,
-      method: 'post',
-      data: payload,
-    });
+    let notif = null;
+    try {
+      notif = await axios({
+        url: refundData.reqData.invoice.notifyUrl,
+        method: 'post',
+        data: payload,
+      });
+    } catch (err) {
+      this.logger.error('Failed to notify ticketing', {
+        err: err instanceof Error ? err.message : String(err),
+        url: refundData.reqData.invoice.notifyUrl,
+      });
+      if (type === 'fail') {
+        await this.repositoryRefund.update(refundId, {
+          refundStatus: RefundStatus.FAIL,
+          updatedAt: moment().toISOString(),
+        });
+      }
+      return;
+    }
     const responseAt = moment().format('YYYY-MM-DD HH:mm:ss');
     const notifLog = notifLogData ? notifLogData : [];
     const notifLogPayload = {
@@ -326,7 +431,6 @@ export class WebhookService {
       await this.repositoryRefund.update(refundId, payloadNotif);
     } else {
       payloadNotif['refundStatus'] = RefundStatus.FAIL;
-      payloadNotif['pgCallback'] = pgCallback;
       await this.repositoryRefund.update(refundId, payloadNotif);
     }
     //end notif ticketing

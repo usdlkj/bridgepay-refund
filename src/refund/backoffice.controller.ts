@@ -23,8 +23,4 @@ export class BackofficeController {
     return this.backofficeService.view(id);
   }
 
-  @Get('/:id/pg-callbacks')
-  async refundPgCallback(@Param('id') id: string) {
-    return this.backofficeService.pgCallback(id);
-  }
 }

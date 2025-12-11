@@ -6,6 +6,7 @@ import {
   RefundBank,
   SearchBankStatus,
 } from 'src/refund/entities/refund-bank.entity';
+import { UpdateRefundBankDto } from './dto/update-refund-bank.dto';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
@@ -15,8 +16,26 @@ import { ClientProxy } from '@nestjs/microservices';
 import { Logger } from 'nestjs-pino';
 import { Payout as PayoutClient } from 'xendit-node';
 import { Channel, ChannelCategory } from 'xendit-node/payout/models';
-const listType = ['string', 'string', 'fixed'];
-const field = ['bank_name', 'xendit_code', 'bank_status'];
+
+type BankFilterKind = 'string' | 'fixed' | 'number' | 'enum' | 'date';
+
+interface BankFilterConfig {
+  field: string; // database column name
+  type: BankFilterKind;
+}
+
+const BANK_FILTER_CONFIG: Record<number, BankFilterConfig> = {
+  0: { field: 'bank_name', type: 'string' },
+  1: { field: 'xendit_code', type: 'string' },
+  2: { field: 'bank_status', type: 'fixed' },
+};
+
+interface BankListColumn {
+  data: number; // index that maps to BANK_FILTER_CONFIG
+  search: {
+    value: string;
+  };
+}
 
 @Injectable()
 export class BankService {
@@ -40,40 +59,84 @@ export class BankService {
     this.env = getEnv(this.configService);
   }
 
-  async list(columns) {
+  async list(columns?: BankListColumn[]): Promise<RefundBank[]> {
     try {
-      const qb =
-        await this.repositoryRefundBank.createQueryBuilder('refundBank');
-      if (columns) {
+      const qb = this.repositoryRefundBank.createQueryBuilder('refundBank');
+
+      if (Array.isArray(columns) && columns.length > 0) {
         for (const row of columns) {
-          const search = row.search.value;
-          const index = row.data;
-          if (search != '') {
-            if (listType[index] == 'string') {
-              qb.andWhere(`"${field[index]}" iLike '%${search}%'`);
-            } else if (listType[index] == 'fixed') {
-              qb.andWhere(`"${field[index]}" = '${search}'`);
-            } else if (listType[index] == 'number') {
-              qb.andWhere(`"${field[index]}" = '${search}'`);
-            } else if (listType[index] == 'enum') {
-              const statusSearch = await this.searchBankStatus.get(
-                search.toLowerCase(),
-              );
-              qb.andWhere(`"${field[index]}" = '${statusSearch}'`);
-            } else {
-              const date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
-              const startDate = date.toISOString();
-              const endDate = date.add(1, 'day').toISOString();
-              qb.andWhere(
-                `"${field[index]}" BETWEEN '${startDate}' AND '${endDate}'`,
-              );
+          const searchRaw = row?.search?.value?.toString() ?? '';
+          if (!searchRaw) {
+            continue;
+          }
+
+          const index = Number(row.data);
+          const config = BANK_FILTER_CONFIG[index];
+          if (!config) {
+            // Unknown column index, skip silently
+            continue;
+          }
+
+          const { field, type } = config;
+          const paramName = `p_${field}_${index}`;
+
+          if (type === 'string') {
+            qb.andWhere(`refundBank."${field}" ILIKE :${paramName}`, {
+              [paramName]: `%${searchRaw}%`,
+            });
+          } else if (type === 'fixed') {
+            qb.andWhere(`refundBank."${field}" = :${paramName}`, {
+              [paramName]: searchRaw,
+            });
+          } else if (type === 'number') {
+            const numericValue = Number(searchRaw);
+            if (!Number.isFinite(numericValue)) {
+              // Invalid number search, skip this condition
+              continue;
             }
+            qb.andWhere(`refundBank."${field}" = :${paramName}`, {
+              [paramName]: numericValue,
+            });
+          } else if (type === 'enum') {
+            const statusSearch = await this.searchBankStatus.get(
+              searchRaw.toLowerCase(),
+            );
+            if (!statusSearch) {
+              // If the mapping is unknown, skip this filter
+              continue;
+            }
+            qb.andWhere(`refundBank."${field}" = :${paramName}`, {
+              [paramName]: statusSearch,
+            });
+          } else {
+            // Treat as a date filter covering the full day in Asia/Jakarta
+            const date = moment.tz(searchRaw, 'DD-MM-YYYY', 'Asia/Jakarta');
+            if (!date.isValid()) {
+              // Invalid date input, skip this filter
+              continue;
+            }
+
+            const startDate = date.toISOString();
+            const endDate = date.add(1, 'day').toISOString();
+
+            const startParam = `${paramName}_start`;
+            const endParam = `${paramName}_end`;
+
+            qb.andWhere(
+              `refundBank."${field}" BETWEEN :${startParam} AND :${endParam}`,
+              {
+                [startParam]: startDate,
+                [endParam]: endDate,
+              },
+            );
           }
         }
       }
+
       const data = await qb.getMany();
       return data;
     } catch (e) {
+      this.logger.error('Error fetching refund bank list', e);
       throw new HttpException(
         { status: 500, message: e.message },
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -81,16 +144,68 @@ export class BankService {
     }
   }
 
-  async view(id) {
-    return await this.repositoryRefundBank.findOne({
-      where: {
-        id: id,
-      },
-    });
+  async view(id: string): Promise<RefundBank> {
+    try {
+      const bank = await this.repositoryRefundBank.findOne({ where: { id } });
+
+      if (!bank) {
+        throw new HttpException(
+          { status: 404, message: 'Refund bank not found' },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      return bank;
+    } catch (e) {
+      this.logger.error(`Error fetching refund bank with id ${id}`, e);
+      if (e instanceof HttpException) throw e;
+      throw new HttpException(
+        { status: 500, message: e.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
-  async update(id, payload) {
-    return this.repositoryRefundBank.update(id, payload);
+  async update(id: string, payload: UpdateRefundBankDto): Promise<RefundBank> {
+    try {
+      const existing = await this.repositoryRefundBank.findOne({
+        where: { id },
+      });
+
+      if (!existing) {
+        throw new HttpException(
+          { status: 404, message: 'Refund bank not found' },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      // Only allow updating of bankStatus and deletedAt, all other fields are managed by sync
+      if (typeof payload.bankStatus !== 'undefined') {
+        existing.bankStatus = payload.bankStatus;
+      }
+
+      if (typeof payload.deletedAt !== 'undefined') {
+        // If deletedAt is provided as a valid ISO string, convert to Date.
+        // If you want to support explicit undelete, you can send an empty string and we treat it as null.
+        if (payload.deletedAt === '' || payload.deletedAt === null) {
+          existing.deletedAt = null;
+        } else {
+          existing.deletedAt = new Date(payload.deletedAt);
+        }
+      }
+
+      const saved = await this.repositoryRefundBank.save(existing);
+      return saved;
+    } catch (e) {
+      this.logger.error(`Error updating refund bank with id ${id}`, e);
+      if (e instanceof HttpException) {
+        throw e;
+      }
+      throw new HttpException(
+        { status: 500, message: e.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   async bankSync() {

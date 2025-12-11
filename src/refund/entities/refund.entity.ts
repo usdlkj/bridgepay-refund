@@ -26,21 +26,21 @@ export enum RefundStatus {
 }
 
 export class SearchRefundStatus {
-  get(search){
-    let data=[]
-    data["rbdapproval"]=RefundStatus.RBDAPPROVAL
-    data["financeapproval"]=RefundStatus.FINANCEAPPROVAL
-    data["pendingdisbursement"]=RefundStatus.PENDINGDISBURSEMENT
-    data["reject"]=RefundStatus.REJECT
-    data["success"]=RefundStatus.SUCCESS
-    data["fail"]=RefundStatus.FAIL
-    data["done"]=RefundStatus.DONE
-    data["onhold"]=RefundStatus.ONHOLD
-    data["cancel"]=RefundStatus.CANCEL
-    data["retry"]=RefundStatus.RETRY
-    data["pendingchecking"]=RefundStatus.PENDINGCHECKING
-    
-    return data[search]
+  get(search) {
+    const data = [];
+    data['rbdapproval'] = RefundStatus.RBDAPPROVAL;
+    data['financeapproval'] = RefundStatus.FINANCEAPPROVAL;
+    data['pendingdisbursement'] = RefundStatus.PENDINGDISBURSEMENT;
+    data['reject'] = RefundStatus.REJECT;
+    data['success'] = RefundStatus.SUCCESS;
+    data['fail'] = RefundStatus.FAIL;
+    data['done'] = RefundStatus.DONE;
+    data['onhold'] = RefundStatus.ONHOLD;
+    data['cancel'] = RefundStatus.CANCEL;
+    data['retry'] = RefundStatus.RETRY;
+    data['pendingchecking'] = RefundStatus.PENDINGCHECKING;
+
+    return data[search];
   }
 }
 
@@ -54,7 +54,7 @@ export class Refund {
     this.id = ulid();
   }
 
-  @Column({ name: 'refund_ga_number', nullable: true })
+  @Column({ name: 'refund_ga_number', nullable: true, unique: true })
   refundId: string;
 
   @ManyToOne(() => RefundDetail)
@@ -111,9 +111,6 @@ export class Refund {
   @Column({ name: 'request_data', type: 'jsonb', nullable: true })
   requestData: Record<string, any>[]; // or array of structured DTOs
 
-  @Column({ name: 'pg_callback', type: 'jsonb', nullable: true })
-  pgCallback: Record<string, any>[]; // webhook/callback logs
-
   @Column({ name: 'retry_attempt', type: 'jsonb', nullable: true })
   retryAttempt: string[];
 
@@ -128,6 +125,15 @@ export class Refund {
 
   @Column({ name: 'notif_log', type: 'jsonb', nullable: true })
   notifLog: Record<string, any>[];
+
+  @Column({ name: 'disbursement_id', nullable: true })
+  disbursementId: string;
+
+  @Column({ name: 'disbursement_response', type: 'jsonb', nullable: true })
+  disbursementResponse: Record<string, any>;
+
+  @Column({ name: 'bank_data_id', type: 'varchar', nullable: true })
+  bankDataId: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

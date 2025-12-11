@@ -12,11 +12,11 @@ import {
   SearchRefundStatus,
 } from './entities/refund.entity';
 import { ConfigurationService } from 'src/configuration/configuration.service';
-import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { RefundService } from './refund.service';
 import { RefundDetail } from './entities/refund-detail.entity';
 import { RefundLog } from './entities/refund-log.entity';
 import { Logger } from 'nestjs-pino';
+import axios from 'axios';
 const listType = ['string', 'json', 'number', 'date', 'enum', 'date'];
 const field = [
   'refund_ga_number',
@@ -47,7 +47,6 @@ export class BackofficeService {
     private readonly refundService: RefundService,
     private readonly searchRefundStatus: SearchRefundStatus,
     private readonly configurationService: ConfigurationService,
-    private readonly yggdrasilService: YggdrasilService,
     private readonly logger: Logger,
   ) {
     this.env = getEnv(this.configService);
@@ -147,17 +146,6 @@ export class BackofficeService {
 
     return refund;
   }
-  async pgCallback(id) {
-    return await this.repositoryRefund.findOne({
-      where: {
-        id: id,
-      },
-      select: {
-        pgCallback: true,
-      },
-    });
-  }
-
   async refundDetail(id) {
     return await this.repositoryRefund.findOne({
       where: {
@@ -191,24 +179,12 @@ export class BackofficeService {
       if (!check) {
         throw new Error('Refund not found');
       }
+      if (check.refundStatus !== RefundStatus.FAIL) {
+        throw new Error('Retry allowed only for fail status');
+      }
       const retryAttempt = check.retryAttempt ? check.retryAttempt.length : 0;
       if (failAttempt == retryAttempt) {
         throw new Error('Max Attempt to retry');
-      }
-
-      const pgCallback = check.pgCallback;
-      const requestData = check.requestData;
-      const lastIdxCallback = pgCallback ? pgCallback.length - 1 : 0;
-      const lastIdxRequest = requestData ? requestData.length - 1 : 0;
-      if (
-        requestData &&
-        pgCallback &&
-        requestData[lastIdxRequest].external_id !=
-          pgCallback[lastIdxCallback].pgCallback.external_id
-      ) {
-        throw new Error(
-          'This order has 1 request not have received from payment gateway. Please try again later',
-        );
       }
 
       const sequenceData = check.retryAttempt ? check.retryAttempt : [];
@@ -230,14 +206,12 @@ export class BackofficeService {
       );
 
       const payloadDisbursement = {
-        provider: 'xendit',
-        func: 'disbursement',
         data: generatePayload.payloadRefund,
         token: credential.secretKey,
       };
 
-      const xendit = await this.yggdrasilService.refund(payloadDisbursement);
-      if (xendit.status == 200) {
+      const xendit = await this.callXenditDisbursement(payloadDisbursement);
+      if (xendit.status === 200) {
         await this.repositoryRefund.update(check.id, {
           refundStatus: RefundStatus.RETRY,
         });
@@ -247,6 +221,33 @@ export class BackofficeService {
     } catch (e) {
       console.log(e);
       throw new Error(e.message);
+    }
+  }
+
+  private async callXenditDisbursement(payload) {
+    try {
+      const auth = payload.token + ':';
+      const key = Buffer.from(auth).toString('base64');
+      const disbursement = await axios.post(
+        'https://api.xendit.co/v2/payouts',
+        payload.data,
+        {
+          headers: {
+            Authorization: 'Basic ' + key,
+            'Content-Type': 'application/json',
+            'Idempotency-key': payload.data?.idempotencyKey,
+          },
+        },
+      );
+      return {
+        status: disbursement.status,
+        data: disbursement.data,
+      };
+    } catch (e) {
+      return {
+        status: e.response?.status ?? 500,
+        data: e.response?.data ?? e.message,
+      };
     }
   }
 
