@@ -164,11 +164,19 @@ export class IlumaService {
     });
 
     if (existing) {
-      // If pending, return as-is
+      this.logInternal('Existing BankData found', {
+        id: existing.id,
+        bankCode: existing.bankCode,
+        accountStatus: existing.accountStatus,
+        lastCheckAt: existing.lastCheckAt,
+      });
+
+      // 1) If still pending, return immediately
       if (existing.accountStatus === 'pending') {
         return existing;
       }
 
+      // 2) If still fresh and completed, trust cached result
       const isFresh =
         existing.lastCheckAt && moment(existing.lastCheckAt).isAfter(datePast);
 
@@ -176,22 +184,18 @@ export class IlumaService {
         return existing;
       }
 
-      // Stale = expired
-      await this.repositoryBankData.update(existing.id, {
-        accountStatus: 'expired',
-        accountResult: 'failed',
-        updatedAt: moment().toISOString(),
-        lastCheckAt: moment().toISOString(),
-      });
-
-      this.logInternal('BankData state transition', {
+      // 3) Stale → DO NOT expire or mutate here
+      //     We simply log and return existing. Re-validation will happen
+      //     downstream via Iluma check + status update.
+      this.logInternal('Stale BankData detected; will revalidate with Iluma', {
         id: existing.id,
-        from: existing.accountStatus,
-        to: 'expired',
-        source: 'resolveBankData:stale',
+        bankCode: existing.bankCode,
+        accountStatus: existing.accountStatus,
+        lastCheckAt: existing.lastCheckAt,
+        ttlCutoff: datePast.toISOString(),
       });
 
-      return null;
+      return existing;
     }
 
     // No existing = create new BankData

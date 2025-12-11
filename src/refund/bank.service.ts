@@ -186,7 +186,6 @@ export class BankService {
 
       if (typeof payload.deletedAt !== 'undefined') {
         // If deletedAt is provided as a valid ISO string, convert to Date.
-        // If you want to support explicit undelete, you can send an empty string and we treat it as null.
         if (payload.deletedAt === '' || payload.deletedAt === null) {
           existing.deletedAt = null;
         } else {

@@ -1,9 +1,5 @@
 import { IsEnum, IsOptional, IsDateString } from 'class-validator';
-
-export enum RefundBankStatus {
-  ENABLE = 'enable',
-  DISABLE = 'disable',
-}
+import { BankStatus } from '../entities/refund-bank.entity';
 
 /**
  * DTO for updating RefundBank.
@@ -14,8 +10,8 @@ export enum RefundBankStatus {
  */
 export class UpdateRefundBankDto {
   @IsOptional()
-  @IsEnum(RefundBankStatus)
-  bankStatus?: RefundBankStatus;
+  @IsEnum(BankStatus)
+  bankStatus?: BankStatus;
 
   /**
    * Soft delete / undelete timestamp.
