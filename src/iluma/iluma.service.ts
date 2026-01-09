@@ -770,6 +770,7 @@ export class IlumaService {
       }
       return this.buildCheckAccountReturn(finalStatusValue);
     } catch (e) {
+      console.log(e,"error in check account");
       this.handleCheckAccountError(e);
     }
   }
