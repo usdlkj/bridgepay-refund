@@ -695,11 +695,13 @@ export class IlumaService {
 
   async checkAccount(payload: CheckAccountDto) {
     try {
+
       const bank = await this.resolveBank(payload.reqData.account.bankId);
 
-      if (!bank) {
+      if (!bank || bank.bankStatus=='disable') {
         return { retCode: -1, retMsg: 'Bank code not found' };
       }
+      
 
       const incomingAccount = payload.reqData.account.accountNo;
 

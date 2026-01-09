@@ -23,6 +23,18 @@ class RefundAccountDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  accountType: string; 
+  
+  @IsString()
+  @IsNotEmpty()
+  idNo: string;
+  
+  @IsString()
+  @IsNotEmpty()
+  idType: string;
 }
 
 /**
@@ -39,6 +51,22 @@ class RefundInvoiceDto {
   @IsString()
   @IsNotEmpty()
   reason: string;
+
+  @IsString()
+  @IsNotEmpty()
+  passengers:string;
+
+  @IsString()
+  @IsNotEmpty()
+  originalOrderNumber:string;
+
+  @IsString()
+  @IsNotEmpty()
+  notifyUrl:string;
+
+  @IsString()
+  @IsNotEmpty()
+  ticketOffice:string;
 }
 
 /**
@@ -68,6 +96,10 @@ export class CreateRefundDto {
   @ValidateNested()
   @Type(() => RefundReqDataDto)
   reqData: RefundReqDataDto;
+
+  @IsString()
+  @IsNotEmpty()
+  signMsg: string;
 
   /**
    * ticketCall = 0 → skip ticketing

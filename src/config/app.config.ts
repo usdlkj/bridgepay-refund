@@ -12,7 +12,7 @@ export default () => ({
     10,
   ),
   iluma: {
-    baseUrl: process.env.ILUMA_BASE_URL || 'https://api.iluma.com',
+    baseUrl: process.env.ILUMA_BASE_URL || 'https://api.iluma.ai',
     token: process.env.ILUMA_TOKEN || '',
     checkAccountWaitMs: parseInt(
       process.env.CHECK_ACCOUNT_MAX_WAIT_MS || '7000',

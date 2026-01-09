@@ -17,4 +17,8 @@ export class StatusRefundDto {
   @ValidateNested()
   @Type(() => ReqDataStatusDto)
   reqData: ReqDataStatusDto;
+
+  @IsString()
+  @IsNotEmpty()
+  signMsg: string;
 }
