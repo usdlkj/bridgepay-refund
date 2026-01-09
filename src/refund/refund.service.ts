@@ -437,6 +437,7 @@ export class RefundService {
 
   async bankList() {
     try {
+      console.log("masuk sini 2");
       const bankList = await this.repositoryRefundBank.find({
         where: {
           bankStatus: 'enable',
