@@ -163,6 +163,7 @@ export class IlumaService {
         accountNumberHash: incomingHash,
       },
     });
+    console.log(existing,"existing")
 
     if (existing) {
       this.logInternal('Existing BankData found', {
@@ -200,6 +201,7 @@ export class IlumaService {
     }
 
     // No existing = create new BankData
+    console.log("prepare for encryptor service")
     const accountEnc = await this.encryptorService
       .send('encrypt', {
         value: Buffer.from(incomingAccount).toString('base64'),
