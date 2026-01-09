@@ -206,7 +206,7 @@ export class IlumaService {
         context: 'refund.bankData.accountNumber',
       })
       .toPromise();
-
+    console.log("prepare for save data");
     const created = this.repositoryBankData.create({
       bankCode: bank.xenditCode,
       accountNumberEnc: accountEnc,
@@ -217,7 +217,7 @@ export class IlumaService {
       createdAt: moment().toISOString(),
       updatedAt: moment().toISOString(),
     });
-
+    console.log(created)
     return this.repositoryBankData.save(created);
   }
 
@@ -716,6 +716,7 @@ export class IlumaService {
           context: 'refund.bankData.accountNumber',
         })
         .toPromise();
+      console.log(incomingHash,"incomingHash");
 
       const bankDataRecord = await this.resolveBankData(
         bank,
