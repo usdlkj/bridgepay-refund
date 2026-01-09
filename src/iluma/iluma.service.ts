@@ -656,7 +656,7 @@ export class IlumaService {
     };
 
     const res = await this.ilumaPost(validateUrl, requestBody);
-
+    console.log(res);
     // Phase E.2.3 – Handle normalized Iluma errors
     if ((res as any).error) {
       this.logInternal('Iluma validator error', {
@@ -697,7 +697,7 @@ export class IlumaService {
     try {
 
       const bank = await this.resolveBank(payload.reqData.account.bankId);
-
+      console.log(bank,"bank")
       if (!bank || bank.bankStatus=='disable') {
         return { retCode: -1, retMsg: 'Bank code not found' };
       }
@@ -723,12 +723,12 @@ export class IlumaService {
         incomingHash,
         datePast,
       );
-
+      console.log(bankDataRecord,"bankDataRecord")
       const checkIluma = await this.callIlumaValidator(
         bank.xenditCode,
         incomingAccount,
       );
-
+      console.log(checkIluma)
       // Phase E.2.4 – Interpret normalized Iluma errors
       if (checkIluma.status !== 200) {
         const err = checkIluma.data;
@@ -751,6 +751,7 @@ export class IlumaService {
         return { retCode: -1, retMsg: 'Invalid response from Iluma' };
       }
       // Store requestId for correlation
+      console.log("sampe sini di checkAccount sebelum error");
       if (bankDataRecord && ilumaData.id) {
         await this.repositoryBankData.update(bankDataRecord.id, {
           requestId: ilumaData.id,
@@ -764,7 +765,7 @@ export class IlumaService {
         incomingAccount,
         bank.xenditCode,
       );
-
+      console.log(finalStatusValue,"finalStatusValue")
       if (finalStatusValue === 'timeout') {
         finalStatusValue = 'failed';
       }
