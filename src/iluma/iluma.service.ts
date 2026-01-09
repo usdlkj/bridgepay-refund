@@ -155,6 +155,7 @@ export class IlumaService {
     incomingHash: string,
     datePast: Date,
   ): Promise<BankData> {
+    try{
     // Look up existing BankData
     const existing = await this.repositoryBankData.findOne({
       where: {
@@ -219,6 +220,10 @@ export class IlumaService {
     });
     console.log(created)
     return this.repositoryBankData.save(created);
+    }catch(e){
+      console.log(e)
+      return e
+    }
   }
 
   /**
