@@ -207,7 +207,18 @@ export class IlumaService {
         context: 'refund.bankData.accountNumber',
       })
       .toPromise();
+    console.log(accountEnc,"accountEnc")
     console.log("prepare for save data");
+    console.log({
+      bankCode: bank.xenditCode,
+      accountNumberEnc: accountEnc,
+      accountNumberHash: incomingHash,
+      accountStatus: 'pending',
+      accountResult: 'pending',
+      lastCheckAt: moment().toISOString(),
+      createdAt: moment().toISOString(),
+      updatedAt: moment().toISOString(),
+    },"payload to save")
     const created = this.repositoryBankData.create({
       bankCode: bank.xenditCode,
       accountNumberEnc: accountEnc,
