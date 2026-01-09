@@ -64,9 +64,9 @@ export class Helper {
   async sign(msg) {
     const filename =
       this.configService.get<string>('refund.keyFilePrivate') || 'pgmid';
-
+    const filePath = path.isAbsolute(filename) ? filename : path.join(__dirname, '../../key/' + filename);
     const pkey = fs.readFileSync(
-      path.join(__dirname, '../../key/' + filename),
+      filePath,
       {
         encoding: 'utf8',
         flag: 'r',
