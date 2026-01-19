@@ -210,7 +210,7 @@ export class WebhookService {
               signMsg: sign,
             };
             //end generate payload
-            await this.#notifTicketing(
+            this.#notifTicketing(
               check.refundData,
               tickectingPayload,
               check.id,
@@ -266,7 +266,7 @@ export class WebhookService {
                 retData: payload,
                 signMsg: sign,
               };
-              await this.#notifTicketing(
+              this.#notifTicketing(
                 check.refundData,
                 tickectingPayload,
                 check.id,
@@ -326,7 +326,7 @@ export class WebhookService {
                   retData: payload,
                   signMsg: sign,
                 };
-                await this.#notifTicketing(
+                this.#notifTicketing(
                   check.refundData,
                   tickectingPayload,
                   check.id,
@@ -366,6 +366,7 @@ export class WebhookService {
       }
       return { message: 'OK' };
     } catch (e) {
+      console.log(e);
       throw new HttpException(
         {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
