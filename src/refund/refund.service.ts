@@ -101,6 +101,7 @@ export class RefundService {
 
       return await this.executeDisbursementFlow(refund, credential, invoice);
     } catch (e) {
+      console.log(e);
       return await this.handleCreateError(payload, e);
     }
   }
@@ -115,6 +116,7 @@ export class RefundService {
         refundId,
       },
     });
+    console.log(check);
     if (check) {
       throw new Error('Duplicate Request');
     }
