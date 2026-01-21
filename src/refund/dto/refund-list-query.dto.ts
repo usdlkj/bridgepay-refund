@@ -1,6 +1,12 @@
 import { IsArray, IsOptional, ValidateNested, IsString, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
+export class RefundListSearchDto {
+  @IsOptional()
+  @IsString()
+  value?: string;
+}
+
 /**
  * DTO for DataTables column filter item
  * Represents a single column filter with search value and column index
@@ -15,12 +21,6 @@ export class RefundListColumnDto {
   @ValidateNested()
   @Type(() => RefundListSearchDto)
   search?: RefundListSearchDto;
-}
-
-export class RefundListSearchDto {
-  @IsOptional()
-  @IsString()
-  value?: string;
 }
 
 /**
