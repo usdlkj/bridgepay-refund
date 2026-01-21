@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { BankService } from './bank.service';
 import { UpdateRefundBankDto } from './dto/update-refund-bank.dto';
+import { ServiceAuthGuard } from '../auth/service-auth.guard';
+import { BankListQueryDto } from './dto/bank-list-query.dto';
 
 @Controller('/api/v2/banks')
+@UseGuards(ServiceAuthGuard)
 export class BankController {
   constructor(private readonly bankService: BankService) {}
 
@@ -12,9 +15,16 @@ export class BankController {
     return this.bankService.bankSync();
   }
 
-  @Get('/')
-  async banksList(@Body('query') query) {
-    return this.bankService.list(query);
+  @Post('/')
+  async banksList(@Body() body: BankListQueryDto) {
+    // Transform DTO to service-compatible format
+    const columns = body.query?.map(col => ({
+      data: col.data,
+      search: {
+        value: col.search?.value || '',
+      },
+    }));
+    return this.bankService.list(columns);
   }
 
   @Get('/:id')

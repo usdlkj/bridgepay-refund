@@ -10,6 +10,7 @@ import { UpdateRefundBankDto } from './dto/update-refund-bank.dto';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import * as moment from 'moment-timezone';
+import { sanitizeErrorMessage } from 'src/utils/error-sanitizer';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';

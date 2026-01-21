@@ -1,9 +1,13 @@
-import { Controller, Get, Body, Param, Post } from '@nestjs/common';
+import { Controller, Get, Body, Param, Post, UseGuards } from '@nestjs/common';
 import { BackofficeService } from './backoffice.service';
 import { BankService } from './bank.service';
 import { BankStatus } from './entities/refund-bank.entity';
+import { ServiceAuthGuard } from '../auth/service-auth.guard';
+import { RefundListQueryDto } from './dto/refund-list-query.dto';
+import { RefundLogQueryDto } from './dto/refund-log-query.dto';
 
 @Controller('/api/v2/refunds')
+@UseGuards(ServiceAuthGuard)
 export class BackofficeController {
   constructor(
     private readonly backofficeService: BackofficeService,
@@ -19,13 +23,13 @@ export class BackofficeController {
     return this.bankService.update(id, { bankStatus: _status });
   }
 
-  @Get('/')
-  async refundList(@Body('query') query) {
-    return this.backofficeService.list(query);
+  @Post('/')
+  async refundList(@Body() body: RefundListQueryDto) {
+    return this.backofficeService.list(body.query);
   }
-  @Get('/log')
-  async refundLog(@Body('query') query) {
-    return this.backofficeService.refundLog(query);
+  @Post('/log')
+  async refundLog(@Body() body: RefundLogQueryDto) {
+    return this.backofficeService.refundLog(body.query);
   }
   @Get('/refundDetail/:id')
   async refundDetail(@Param('id') id: string) {

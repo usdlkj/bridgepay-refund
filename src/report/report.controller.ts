@@ -7,19 +7,23 @@ import {
   Res,
   HttpStatus,
   HttpException,
+  UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ReportService } from './report.service';
 import { CreateReportDto } from './dto/create-report.dto';
+import { ReportListQueryDto } from './dto/report-list-query.dto';
 import * as ExcelJS from 'exceljs';
+import { ServiceAuthGuard } from '../auth/service-auth.guard';
 
 @Controller('/api/v2/report')
+@UseGuards(ServiceAuthGuard)
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
-  @Get('/')
-  async reportList(@Body('query') query) {
-    return this.reportService.list(query);
+  @Post('/')
+  async reportList(@Body() body: ReportListQueryDto) {
+    return this.reportService.list(body.query);
   }
 
   @Post('/create')

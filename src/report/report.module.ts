@@ -7,10 +7,12 @@ import { ReportDataRow } from './entities/report-data-row.entity';
 import { Refund } from 'src/refund/entities/refund.entity';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 import { CronService } from './cron.service';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Report, ReportDataRow, Refund, IlumaCallLog]),
+    AuthModule,
   ],
   providers: [ReportService,CronService],
   controllers: [ReportController],

@@ -23,6 +23,7 @@ import { TicketingCallLog } from './entities/ticketing-call-log.entity';
 import { EncryptorClient } from '../utils/encryptor.client';
 import { BankData } from 'src/iluma/entities/bank-data.entity';
 import { RefundWebhookCall } from './entities/refund-webhook-call.entity';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { RefundWebhookCall } from './entities/refund-webhook-call.entity';
     ConfigurationModule,
     YggdrasilModule,
     ApiLogDebugModule,
+    AuthModule,
   ],
   providers: [
     RefundService,

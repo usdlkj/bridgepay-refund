@@ -23,6 +23,7 @@ import { CheckAccountDto } from './dto/check-account.dto';
 
 import axios from 'axios';
 import { Logger } from 'nestjs-pino';
+import { sanitizeErrorMessage } from 'src/utils/error-sanitizer';
 
 /**
  * Iluma API endpoints
@@ -999,9 +1000,17 @@ export class IlumaService {
       if (e && e.code && e.httpStatus) {
         this.logInternal('checkAccount() caught normalized IlumaError', e);
 
+        // For normalized Iluma errors, the message is already sanitized by Iluma API
+        // but we still sanitize it to be safe
+        const sanitizedMessage = sanitizeErrorMessage(
+          e,
+          'Iluma service error',
+          HttpStatus.OK,
+        );
+
         const result = {
           retCode: -1,
-          retMsg: e.message || 'Iluma error',
+          retMsg: sanitizedMessage,
           errorCode: e.code || 'ILUMA_ERROR',
         };
 
@@ -1014,9 +1023,16 @@ export class IlumaService {
 
         this.logInternal('checkAccount() caught wrapped IlumaError', err);
 
+        // For wrapped Iluma errors, sanitize the message
+        const sanitizedMessage = sanitizeErrorMessage(
+          err,
+          'Iluma service error',
+          HttpStatus.OK,
+        );
+
         const result = {
           retCode: -1,
-          retMsg: err.message || 'Iluma error',
+          retMsg: sanitizedMessage,
           errorCode: err.code || 'ILUMA_ERROR',
         };
 
@@ -1024,13 +1040,22 @@ export class IlumaService {
       }
 
       // Fallback: generic internal error
+      // Log full error for debugging
       this.logInternal('checkAccount() internal error', {
         message: e?.message,
+        error: e,
       });
+
+      // Return sanitized message to client
+      const sanitizedMessage = sanitizeErrorMessage(
+        e,
+        'Failed to check account',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
 
       const result = {
         retCode: -1,
-        retMsg: e?.message || 'Unknown error',
+        retMsg: sanitizedMessage,
       };
       throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
     } catch (err) {

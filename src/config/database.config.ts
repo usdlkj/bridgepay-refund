@@ -5,6 +5,7 @@ export default () => ({
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     name: process.env.DB_DATABASE,
+    caPath: process.env.DB_CA_PATH,
   },
 
   // For replication

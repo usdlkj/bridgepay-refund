@@ -43,25 +43,51 @@ export class ReportService {
   async list(columns) {
     try {
       const qb = await this.repositoryReport.createQueryBuilder('report');
-      if (columns) {
-        for (const row of columns) {
-          const search = row.search.value;
-          const index = row.data;
-          if (search != '') {
-            if (listType[index] == 'string') {
-              qb.andWhere(`"${field[index]}" iLike '%${search}%'`);
-            } else if (listType[index] == 'fixed') {
-              qb.andWhere(`"${field[index]}" = '${search}'`);
-            } else if (listType[index] == 'number') {
-              qb.andWhere(`"${field[index]}" = '${search}'`);
-            } else {
-              const date = moment.tz(search, 'DD-MM-YYYY', 'Asia/Jakarta');
-              const startDate = date.toISOString();
-              const endDate = date.add(1, 'day').toISOString();
-              qb.andWhere(
-                `"${field[index]}" BETWEEN '${startDate}' AND '${endDate}'`,
-              );
+      if (columns && Array.isArray(columns)) {
+        for (let i = 0; i < columns.length; i++) {
+          const row = columns[i];
+          const search = row?.search?.value;
+          const index = row?.data;
+
+          if (!search && search !== 0 && search !== '') {
+            continue;
+          }
+
+          const fieldName = field[index];
+          const type = listType[index];
+          const paramKey = `report_${index}_${i}`;
+
+          if (!fieldName || !type) {
+            continue;
+          }
+
+          if (type === 'string') {
+            qb.andWhere(`"${fieldName}" ILIKE :${paramKey}`, {
+              [paramKey]: `%${search}%`,
+            });
+          } else if (type === 'fixed') {
+            qb.andWhere(`"${fieldName}" = :${paramKey}`, {
+              [paramKey]: search,
+            });
+          } else if (type === 'number') {
+            qb.andWhere(`"${fieldName}" = :${paramKey}`, {
+              [paramKey]: Number(search),
+            });
+          } else {
+            // Date type
+            const date = moment.tz(String(search), 'DD-MM-YYYY', 'Asia/Jakarta');
+            if (!date.isValid()) {
+              continue;
             }
+            const startDate = date.startOf('day').toISOString();
+            const endDate = date.endOf('day').toISOString();
+            qb.andWhere(
+              `"${fieldName}" BETWEEN :start_${paramKey} AND :end_${paramKey}`,
+              {
+                [`start_${paramKey}`]: startDate,
+                [`end_${paramKey}`]: endDate,
+              },
+            );
           }
         }
       }

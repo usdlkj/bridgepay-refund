@@ -18,6 +18,7 @@ import { StatusRefundDto } from './dto/status-refund.dto';
 import { EncryptorClient } from 'src/utils/encryptor.client';
 import { maskAccountNumber } from 'src/utils/mask.util';
 import axios from 'axios';
+import { sanitizeErrorMessage } from 'src/utils/error-sanitizer';
 
 @Injectable()
 export class RefundService {
@@ -324,13 +325,21 @@ export class RefundService {
         });
       }
     }
-    const result = {
-      retCode: -1,
-      retMsg: e.message,
-    };
+    // Log full error for debugging (already logged to database above)
+    // Return sanitized message to client
     const statusCode = isDuplicate
       ? HttpStatus.CONFLICT
       : HttpStatus.INTERNAL_SERVER_ERROR;
+    const sanitizedMessage = sanitizeErrorMessage(
+      e,
+      'Failed to process refund request',
+      statusCode,
+    );
+
+    const result = {
+      retCode: -1,
+      retMsg: sanitizedMessage,
+    };
     throw new HttpException(result, statusCode);
   }
 
@@ -360,9 +369,17 @@ export class RefundService {
       });
     }
 
+    // Log full error for debugging (already logged to database above)
+    // Return sanitized message to client
+    const sanitizedMessage = sanitizeErrorMessage(
+      e,
+      'Failed to process disbursement',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+
     const result = {
       retCode: -1,
-      retMsg: e.message,
+      retMsg: sanitizedMessage,
     };
     throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
   }
@@ -429,9 +446,19 @@ export class RefundService {
       };
       return result;
     } catch (e) {
+      // Log full error for debugging
+      console.error('Error in status method:', e instanceof Error ? e.message : String(e));
+
+      // Return sanitized message to client
+      const sanitizedMessage = sanitizeErrorMessage(
+        e,
+        'Failed to retrieve refund status',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+
       const result = {
         retCode: -1,
-        retMsg: e.message,
+        retMsg: sanitizedMessage,
       };
       throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -461,9 +488,19 @@ export class RefundService {
       };
       return result;
     } catch (e) {
+      // Log full error for debugging
+      console.error('Error in bankList method:', e instanceof Error ? e.message : String(e));
+
+      // Return sanitized message to client
+      const sanitizedMessage = sanitizeErrorMessage(
+        e,
+        'Failed to retrieve bank list',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+
       const result = {
         retCode: -1,
-        retMsg: e.message,
+        retMsg: sanitizedMessage,
       };
       throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
     }

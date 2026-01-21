@@ -1,12 +1,11 @@
-export default () => ({
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '4000', 10),
-  enableMetrics: process.env.ENABLE_METRICS === 'true',
-  alertDedupMs: process.env.ALERT_DEDUP_MS || 30000,
-  jwtSecret: process.env.JWT_SECRET || 'YCBqMzRNatsECcf3TnWU2r4SJs74Xsay',
-  logsFolder: process.env.LOGS_FOLDER,
-  ticketingApiBaseUrl:
-    process.env.TICKETING_API_BASE_URL || 'http://8.210.58.52:9432',
+export default () => {
+  return {
+    nodeEnv: process.env.NODE_ENV || 'development',
+    port: parseInt(process.env.PORT || '4000', 10),
+    enableMetrics: process.env.ENABLE_METRICS === 'true',
+    alertDedupMs: process.env.ALERT_DEDUP_MS || 30000,
+    logsFolder: process.env.LOGS_FOLDER,
+  ticketingApiBaseUrl: process.env.TICKETING_API_BASE_URL,
   bankAccountCheckTtlDays: parseInt(
     process.env.BANK_ACCOUNT_CHECK_TTL_DAYS || '10',
     10,
@@ -27,6 +26,6 @@ export default () => ({
       10,
     ),
   },
-  credentialEncryptionKey:
-    process.env.CREDENTIAL_ENCRYPTION_KEY || 'bridgepay2020',
-});
+  serviceToServiceSecret: process.env.SERVICE_TO_SERVICE_SECRET,
+  };
+};

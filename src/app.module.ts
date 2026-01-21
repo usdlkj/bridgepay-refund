@@ -19,6 +19,7 @@ import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import rabbitmqConfig from './config/rabbitmq.config';
 import refundConfig from './config/refund.config';
+import redisConfig from './config/redis.config';
 
 const resolveReaderDbConfig = (config: ConfigService) => {
   const hasReplicaConfig =
@@ -55,19 +56,22 @@ const loadDbSsl = (config: ConfigService) => {
   if (!isProd) return undefined;
 
   const caPath = config.get<string>('database.caPath');
-  if (!caPath) return { rejectUnauthorized: false };
+  if (!caPath) {
+    throw new Error(
+      'Database CA certificate path is required in production/staging environments',
+    );
+  }
 
   try {
     const ca = readFileSync(caPath);
     return {
-      rejectUnauthorized: false,
+      rejectUnauthorized: true, // ✅ Enable SSL certificate validation
       ca,
     };
-  } catch {
-    console.warn(
-      `Could not read Database CA at ${caPath}; proceeding without custom CA`,
+  } catch (error) {
+    throw new Error(
+      `Could not read Database CA certificate at ${caPath}: ${error.message}`,
     );
-    return { rejectUnauthorized: false };
   }
 };
 @Module({
@@ -168,7 +172,7 @@ const loadDbSsl = (config: ConfigService) => {
           autoLoadEntities: true,
           logging: false,
           ssl: loadDbSsl(config),
-          synchronize: true,
+          synchronize: false,
         };
       },
     }),
@@ -192,7 +196,7 @@ const loadDbSsl = (config: ConfigService) => {
                 logging: false,
                 name: 'reader',
                 ssl: loadDbSsl(config),
-                synchronize: true,
+                synchronize: false,
               };
             },
           }),

@@ -89,22 +89,68 @@ export class WebhookService {
     callbackToken: string,
     rawPayload: any = null,
   ) {
+    // Validate callback token BEFORE processing any data
+    // Token must be retrieved from bridgepay-core via RabbitMQ
+    if (!callbackToken) {
+      this.logger.error('Webhook callback token is missing');
+      throw new HttpException(
+        {
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'Callback token is required',
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    // Retrieve valid token from bridgepay-core via RabbitMQ
+    let credential;
     try {
-      const credential = await this.helper.getXenditCredential(
+      credential = await this.helper.getXenditCredential(
         this.coreService,
         this.logger,
         this.env,
       );
-      if (callbackToken != credential.callbackToken) {
-        this.logger.error('Webhook token mismatch');
-        throw new HttpException(
-          {
-            status: HttpStatus.INTERNAL_SERVER_ERROR,
-            message: 'Callback Token mismatch',
-          },
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
+    } catch (err) {
+      this.logger.error('Failed to retrieve credential from bridgepay-core', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw new HttpException(
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Failed to retrieve credential from bridgepay-core',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    if (!credential || !credential.callbackToken) {
+      this.logger.error('Invalid credential: callback token not found');
+      throw new HttpException(
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Invalid credential: callback token not found',
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    // Validate token using strict equality to prevent type coercion issues
+    if (callbackToken !== credential.callbackToken) {
+      this.logger.error('Webhook token validation failed', {
+        receivedTokenLength: callbackToken?.length || 0,
+        expectedTokenLength: credential.callbackToken?.length || 0,
+      });
+      throw new HttpException(
+        {
+          status: HttpStatus.UNAUTHORIZED,
+          message: 'Invalid callback token',
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    // Token validated successfully - proceed with processing
+    try {
 
       const payloadToStore = rawPayload || payload;
       const payout = payload.data;
