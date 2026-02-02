@@ -146,7 +146,9 @@ export class IlumaService {
 
   private async resolveBank(ilumaCode: string): Promise<RefundBank | null> {
     return this.repositoryRefundBank.findOne({
-      where: { ilumaCode },
+      where: { 
+        xenditCode: ilumaCode,
+       },
     });
   }
 
