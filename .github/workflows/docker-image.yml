@@ -81,7 +81,6 @@ jobs:
         run: |
           set -euo pipefail
           echo "Pushed digest: ${{ steps.build-and-push.outputs.digest }}"
----
 
       - name: Update image tag in GitOps repo
         shell: bash
