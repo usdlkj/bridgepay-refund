@@ -82,3 +82,18 @@ jobs:
           set -euo pipefail
           echo "Pushed digest: ${{ steps.build-and-push.outputs.digest }}"
 ---
+
+      - name: Update image tag in GitOps repo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://usdlkj:${{ secrets.GITOPS_PAT }}@github.com/usdlkj/bridgepay-deploy.git gitops
+          cd gitops
+          git checkout deploy
+          sed -i "s|image: .*bridgepay/refund.*|image: ${{ steps.meta.outputs.image_uri }}|g" \
+            envs/current/refund/deployment.yaml
+          git config user.email "ci@kcic.co.id"
+          git config user.name "KCIC CI"
+          git add envs/current/refund/deployment.yaml
+          git diff --staged --quiet || git commit -m "ci: update bridgepay-refund to ${{ steps.meta.outputs.tag }}"
+          git push origin deploy
