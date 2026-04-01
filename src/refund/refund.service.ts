@@ -124,7 +124,7 @@ export class RefundService {
   private async getBankData(payload: CreateRefundDto, manager: EntityManager) {
     const checkBank = await manager.getRepository(RefundBank).findOne({
       where: {
-        xenditCode: `${payload.reqData.account.bankId}`,
+        xenditCode: `ID_${payload.reqData.account.bankId}`,
         bankStatus: 'enable',
       },
     });
@@ -402,9 +402,9 @@ export class RefundService {
       const jsonData = check.refundData;
       const payoutData = check.disbursementId
         ? await this.fetchPayoutStatus(
-            check.disbursementId,
-            credential.secretKey,
-          )
+          check.disbursementId,
+          credential.secretKey,
+        )
         : null;
       const invoice = {};
 
@@ -681,8 +681,7 @@ export class RefundService {
       return payout.data;
     } catch (e) {
       throw new Error(
-        `Failed to fetch payout status: ${
-          e.response?.data?.message || e.message
+        `Failed to fetch payout status: ${e.response?.data?.message || e.message
         }`,
       );
     }
