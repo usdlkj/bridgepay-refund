@@ -5,6 +5,7 @@ import {
   ValidateNested,
   IsOptional,
   IsObject,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -32,8 +33,7 @@ class RefundAccountDto {
   @IsNotEmpty()
   idNo: string;
   
-  @IsString()
-  @IsNotEmpty()
+  @IsIn(['1', '2', '3'])
   idType: string;
 }
 
