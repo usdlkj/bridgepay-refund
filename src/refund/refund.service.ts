@@ -136,7 +136,7 @@ export class RefundService {
     return {
       bankName: payload.reqData.account.name,
       bankNumber: payload.reqData.account.accountNo,
-      bankCode: payload.reqData.account.bankId,
+      bankCode: `ID_${payload.reqData.account.bankId}`,
     };
   }
 
