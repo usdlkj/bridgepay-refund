@@ -166,7 +166,6 @@ export class IlumaService {
         accountNumberHash: incomingHash,
       },
     });
-    console.log(existing,"existing")
 
     if (existing) {
       this.logInternal('Existing BankData found', {
@@ -204,7 +203,6 @@ export class IlumaService {
     }
 
     // No existing = create new BankData
-    console.log("prepare for encryptor service")
     const accountEnc = await this.encryptorService
       .send('encrypt', {
         value: Buffer.from(incomingAccount).toString('base64'),
@@ -212,18 +210,6 @@ export class IlumaService {
         context: 'refund.bankData.accountNumber',
       })
       .toPromise();
-    console.log(accountEnc,"accountEnc")
-    console.log("prepare for save data");
-    console.log({
-      bankCode: bank.xenditCode,
-      accountNumberEnc: accountEnc,
-      accountNumberHash: incomingHash,
-      accountStatus: 'pending',
-      accountResult: 'pending',
-      lastCheckAt: moment().toISOString(),
-      createdAt: moment().toISOString(),
-      updatedAt: moment().toISOString(),
-    },"payload to save")
     const created = this.repositoryBankData.create({
       bankCode: bank.xenditCode,
       accountNumberEnc: accountEnc,
@@ -234,10 +220,8 @@ export class IlumaService {
       createdAt: moment().toISOString(),
       updatedAt: moment().toISOString(),
     });
-    console.log(created)
     return this.repositoryBankData.save(created);
     }catch(e){
-      console.log(e)
       return e
     }
   }
@@ -677,7 +661,6 @@ export class IlumaService {
     };
 
     const res = await this.ilumaPost(validateUrl, requestBody);
-    console.log(res);
     // Phase E.2.3 – Handle normalized Iluma errors
     if ((res as any).error) {
       this.logInternal('Iluma validator error', {
@@ -718,7 +701,6 @@ export class IlumaService {
     try {
 
       const bank = await this.resolveBank(payload.reqData.account.bankId);
-      console.log(bank,"bank")
       if (!bank || bank.bankStatus=='disable') {
         return { retCode: -1, retMsg: 'Bank code not found' };
       }
@@ -737,7 +719,6 @@ export class IlumaService {
           context: 'refund.bankData.accountNumber',
         })
         .toPromise();
-      console.log(incomingHash,"incomingHash");
 
       const bankDataRecord = await this.resolveBankData(
         bank,
@@ -745,12 +726,10 @@ export class IlumaService {
         incomingHash,
         datePast,
       );
-      console.log(bankDataRecord,"bankDataRecord")
       const checkIluma = await this.callIlumaValidator(
         bank.xenditCode,
         incomingAccount,
       );
-      console.log(checkIluma)
       // Phase E.2.4 – Interpret normalized Iluma errors
       if (checkIluma.status !== 200) {
         const err = checkIluma.data;
@@ -773,7 +752,6 @@ export class IlumaService {
         return { retCode: -1, retMsg: 'Invalid response from Iluma' };
       }
       // Store requestId for correlation
-      console.log("sampe sini di checkAccount sebelum error");
       if (bankDataRecord && ilumaData.id) {
         await this.repositoryBankData.update(bankDataRecord.id, {
           requestId: ilumaData.id,
@@ -787,13 +765,11 @@ export class IlumaService {
         incomingAccount,
         bank.xenditCode,
       );
-      console.log(finalStatusValue,"finalStatusValue")
       if (finalStatusValue === 'timeout') {
         finalStatusValue = 'failed';
       }
       return this.buildCheckAccountReturn(finalStatusValue);
     } catch (e) {
-      console.log(e,"error in check account");
       this.handleCheckAccountError(e);
     }
   }

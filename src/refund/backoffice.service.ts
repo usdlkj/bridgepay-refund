@@ -219,7 +219,6 @@ export class BackofficeService {
         throw new Error('Failed Xendit disbursement');
       }
     } catch (e) {
-      console.log(e);
       throw new Error(e.message);
     }
   }

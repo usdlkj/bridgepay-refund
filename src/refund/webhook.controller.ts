@@ -24,7 +24,6 @@ export class WebhookController {
 
   @MessagePattern({ cmd: 'refund.webhook.xendit.disbursement' })
   async webhookXenditRpc(@Body() payload: XenditWebhooRpcDto){
-    console.log(payload);
     return this.webhookService.xendit(payload.payload,payload.headers,payload.req);
   }
 }

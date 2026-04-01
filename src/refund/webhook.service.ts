@@ -412,7 +412,6 @@ export class WebhookService {
       }
       return { message: 'OK' };
     } catch (e) {
-      console.log(e);
       throw new HttpException(
         {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -466,15 +465,12 @@ export class WebhookService {
       updatedAt: moment().toISOString(),
     };
     if (type == 'success') {
-      console.log(notif);
-      // console.log(notif.status);
       if (
         (notif.status == 200 || notif.status == 201) &&
         notif.data.retCode == 0
       ) {
         payloadNotif['refundStatus'] = RefundStatus.DONE;
       }
-      console.log(payloadNotif);
       await this.repositoryRefund.update(refundId, payloadNotif);
     } else {
       payloadNotif['refundStatus'] = RefundStatus.FAIL;
