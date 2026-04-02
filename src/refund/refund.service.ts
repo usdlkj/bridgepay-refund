@@ -122,11 +122,13 @@ export class RefundService {
   }
 
   private async getBankData(payload: CreateRefundDto, manager: EntityManager) {
+    //for handle old and new xenditCode
     let bankCode = payload.reqData.account.bankId;
     let checkCode = bankCode.split('_');
     if (checkCode.length == 1) {
       bankCode = 'ID_' + bankCode;
     }
+    //for handle old and new xenditCode
     const checkBank = await manager.getRepository(RefundBank).findOne({
       where: {
         xenditCode: bankCode,
