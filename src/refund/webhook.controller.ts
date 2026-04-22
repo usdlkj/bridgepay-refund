@@ -1,7 +1,5 @@
-import { Controller, Post, Body, Headers, Req } from '@nestjs/common';
+import { Controller, Post, Body, Headers } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
-import { XenditWebhookDto } from './dto/xendit-webhook.dto';
-import { Request } from 'express';
 import { MessagePattern } from '@nestjs/microservices';
 import { XenditWebhooRpcDto } from './dto/xendit-webhook-rpc.dto';
 
@@ -9,21 +7,26 @@ import { XenditWebhooRpcDto } from './dto/xendit-webhook-rpc.dto';
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
+  // Respond immediately — Xendit retries if no OK within 30s, regardless of our processing result
   @Post('/xendit/disbursement')
   async webhookXendit(
-    @Body() payload: XenditWebhookDto,
+    @Body() payload: Record<string, unknown>,
     @Headers() headers: Record<string, string>,
-    @Req() req: Request,
   ) {
-    return this.webhookService.xendit(
-      payload,
-      headers['x-callback-token'],
-      req.body,
-    );
+    this.webhookService
+      .xendit(payload, headers['x-callback-token'], payload)
+      .catch((err) => {
+        console.error('xendit disbursement webhook error:', err);
+      });
+    return { message: 'OK' };
   }
 
   @MessagePattern({ cmd: 'refund.webhook.xendit.disbursement' })
-  async webhookXenditRpc(@Body() payload: XenditWebhooRpcDto){
-    return this.webhookService.xendit(payload.payload,payload.headers,payload.req);
+  async webhookXenditRpc(@Body() payload: XenditWebhooRpcDto) {
+    return this.webhookService.xendit(
+      payload.payload,
+      payload.headers,
+      payload.req,
+    );
   }
 }
