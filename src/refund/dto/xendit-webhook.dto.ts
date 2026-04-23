@@ -72,6 +72,33 @@ class XenditWebhookDataDto {
   @IsOptional()
   @IsString()
   failure_code?: string;
+
+  @IsOptional()
+  invoice_id?: string;
+
+  @IsOptional()
+  payment_id?: string;
+
+  @IsOptional()
+  payment_method_type?: string;
+
+  @IsOptional()
+  reason?: string;
+
+  @IsOptional()
+  refund_id?: string;
+
+  @IsOptional()
+  refund_fee_amount?: number;
+
+  @IsOptional()
+  metadata?: any;
+
+  @IsOptional()
+  refund_fee_currency?: string;
+
+  @IsOptional()
+  receipt_notification?: object;
 }
 
 export class XenditWebhookDto {
