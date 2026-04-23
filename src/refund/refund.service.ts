@@ -1,5 +1,5 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
 import { ConfigService } from '@nestjs/config';
@@ -404,7 +404,7 @@ export class RefundService {
       });
 
       if (!check) {
-        throw new Error('Refund not found');
+        throw new RpcException({ message: 'Refund not found', statusCode: 404 });
       }
       const jsonData = check.refundData;
       const payoutData = check.disbursementId
@@ -454,18 +454,31 @@ export class RefundService {
       // Log full error for debugging
       console.error('Error in status method:', e instanceof Error ? e.message : String(e));
 
+      // Extract status code from RpcException or error object
+      let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+      if (e instanceof RpcException) {
+        const error = e.getError();
+        if (typeof error === 'object' && error['statusCode']) {
+          statusCode = error['statusCode'];
+        }
+      } else if (e['status']) {
+        statusCode = e['status'];
+      } else if (e['statusCode']) {
+        statusCode = e['statusCode'];
+      }
+
       // Return sanitized message to client
       const sanitizedMessage = sanitizeErrorMessage(
         e,
         'Failed to retrieve refund status',
-        HttpStatus.INTERNAL_SERVER_ERROR,
+        statusCode,
       );
 
       const result = {
         retCode: -1,
         retMsg: sanitizedMessage,
       };
-      throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(result, statusCode);
     }
   }
 
