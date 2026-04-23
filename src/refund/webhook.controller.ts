@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Headers } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
+import { XenditWebhookDto } from './dto/xendit-webhook.dto';
 import { MessagePattern } from '@nestjs/microservices';
 import { XenditWebhooRpcDto } from './dto/xendit-webhook-rpc.dto';
 
@@ -14,7 +15,11 @@ export class WebhookController {
     @Headers() headers: Record<string, string>,
   ) {
     this.webhookService
-      .xendit(payload, headers['x-callback-token'], payload)
+      .xendit(
+        payload as unknown as XenditWebhookDto,
+        headers['x-callback-token'],
+        payload,
+      )
       .catch((err) => {
         console.error('xendit disbursement webhook error:', err);
       });
