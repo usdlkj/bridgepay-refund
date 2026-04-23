@@ -1,4 +1,4 @@
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Inject, HttpStatus } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { getEnv } from '../utils/env.utils';
 import { Helper } from 'src/utils/helper';
@@ -345,7 +345,7 @@ export class RefundService {
       retCode: -1,
       retMsg: sanitizedMessage,
     };
-    throw new HttpException(result, statusCode);
+    throw new RpcException(result);
   }
 
   private async handleDisbursementError(refundId: string, e) {
@@ -386,7 +386,7 @@ export class RefundService {
       retCode: -1,
       retMsg: sanitizedMessage,
     };
-    throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
+    throw new RpcException(result);
   }
 
   async status(payload: StatusRefundDto) {
@@ -451,34 +451,21 @@ export class RefundService {
       };
       return result;
     } catch (e) {
-      // Log full error for debugging
-      console.error('Error in status method:', e instanceof Error ? e.message : String(e));
+      if (e instanceof RpcException) throw e;
 
-      // Extract status code from RpcException or error object
-      let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
-      if (e instanceof RpcException) {
-        const error = e.getError();
-        if (typeof error === 'object' && error['statusCode']) {
-          statusCode = error['statusCode'];
-        }
-      } else if (e['status']) {
-        statusCode = e['status'];
-      } else if (e['statusCode']) {
-        statusCode = e['statusCode'];
-      }
-
-      // Return sanitized message to client
-      const sanitizedMessage = sanitizeErrorMessage(
-        e,
-        'Failed to retrieve refund status',
-        statusCode,
-      );
+      this.logger.error('Error in status method', {
+        error: e instanceof Error ? e.message : String(e),
+      });
 
       const result = {
         retCode: -1,
-        retMsg: sanitizedMessage,
+        retMsg: sanitizeErrorMessage(
+          e,
+          'Failed to retrieve refund status',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        ),
       };
-      throw new HttpException(result, statusCode);
+      throw new RpcException(result);
     }
   }
 
@@ -519,7 +506,7 @@ export class RefundService {
         retCode: -1,
         retMsg: sanitizedMessage,
       };
-      throw new HttpException(result, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new RpcException(result);
     }
   }
 
