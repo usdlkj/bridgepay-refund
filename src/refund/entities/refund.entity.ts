@@ -128,7 +128,7 @@ export class Refund {
   @Column({ name: 'refund_execute_data', type: 'jsonb', nullable: true })
   refundExecuteData: Record<any, any>;
 
-  @Column({ name: 'notif_log', type: 'jsonb', nullable: true })
+  @Column({ name: 'notif_log', type: 'json', nullable: true })
   notifLog: Record<string, any>[];
 
   @Column({ name: 'disbursement_id', nullable: true })
