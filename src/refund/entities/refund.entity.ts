@@ -7,8 +7,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { RefundDetail } from './refund-detail.entity';
+import { RefundWebhookCall } from './refund-webhook-call.entity';
 import { ulid } from 'ulid';
 
 export enum RefundStatus {
@@ -60,6 +62,9 @@ export class Refund {
   @ManyToOne(() => RefundDetail)
   @JoinColumn({ name: 'refund_detail_id' })
   refundDetail: RefundDetail;
+
+  @OneToMany(() => RefundWebhookCall, (webhookCall) => webhookCall.refund)
+  webhookCalls: RefundWebhookCall[];
 
   @Column({
     name: 'refund_status',
@@ -123,7 +128,7 @@ export class Refund {
   @Column({ name: 'refund_execute_data', type: 'jsonb', nullable: true })
   refundExecuteData: Record<any, any>;
 
-  @Column({ name: 'notif_log', type: 'jsonb', nullable: true })
+  @Column({ name: 'notif_log', type: 'json', nullable: true })
   notifLog: Record<string, any>[];
 
   @Column({ name: 'disbursement_id', nullable: true })

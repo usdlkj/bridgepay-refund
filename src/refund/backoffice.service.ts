@@ -54,7 +54,8 @@ export class BackofficeService {
 
   async list(columns: any) {
     try {
-      const qb = this.repositoryRefund.createQueryBuilder('refund');
+      const qb = this.repositoryRefund.createQueryBuilder('refund')
+        .leftJoinAndSelect('refund.webhookCalls', 'webhookCalls');
 
       if (columns && Array.isArray(columns)) {
         for (let i = 0; i < columns.length; i++) {
