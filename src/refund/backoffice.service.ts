@@ -19,15 +19,21 @@ import { Logger } from 'nestjs-pino';
 import axios from 'axios';
 const listType = ['string', 'json', 'number', 'date', 'enum', 'date'];
 const field = [
-  'refund_ga_number',
-  "refund_data->'reqData'->'account'->>'name'",
-  'refund_amount',
-  'created_at',
-  'refund_status',
-  'refund_date',
+  'refund.refund_ga_number',
+  "refund.refund_data->'reqData'->'account'->>'name'",
+  'refund.refund_amount',
+  'refund.created_at',
+  'refund.refund_status',
+  'refund.refund_date',
 ];
 const listTypeLog = ['string', 'string', 'string', 'string', 'date'];
-const fieldLog = ['type', 'location', 'msg', 'notes', 'created_at'];
+const fieldLog = [
+  'refundLog.type',
+  'refundLog.location',
+  'refundLog.msg',
+  'refundLog.notes',
+  'refundLog.created_at',
+];
 
 @Injectable()
 export class BackofficeService {
@@ -125,6 +131,7 @@ export class BackofficeService {
       const data = await qb.getMany();
       return data;
     } catch (e) {
+      console.log(e);
       throw new HttpException(
         { status: 500, message: e.message },
         HttpStatus.INTERNAL_SERVER_ERROR,
