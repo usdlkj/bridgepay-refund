@@ -116,16 +116,16 @@ export class Helper {
   }
 
   async totalAmountDisbursement(amount: any) {
-    const amountAndFee =
-      parseInt(amount) + parseInt(process.env.DISBURSEMENT_FEE_FIX);
-    const ppn =
-      (parseInt(process.env.DISBURSEMENT_FEE_FIX) *
-        parseInt(process.env.PPN_VALUE)) /
-      100;
+    const feeFix =
+      this.configService.get<number>('refund.disbursementFeeFix') || 0;
+    const ppnValue = this.configService.get<number>('refund.ppnValue') || 0;
+
+    const amountAndFee = parseInt(amount) + feeFix;
+    const ppn = (feeFix * ppnValue) / 100;
     const totalAmount = amountAndFee + Math.ceil(ppn);
     const result = {
       amount: parseInt(amount),
-      fee: parseInt(process.env.DISBURSEMENT_FEE_FIX),
+      fee: feeFix,
       AmountAfterFee: amountAndFee,
       tax: Math.ceil(ppn),
       totalAmount: totalAmount,

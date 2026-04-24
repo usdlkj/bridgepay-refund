@@ -427,11 +427,11 @@ export class RefundService {
         invoice['comment'] = check.rejectReason;
       }
       invoice['curType'] = '360';
-      invoice['fee'] = process.env.DISBURSEMENT_FEE_FIX;
+      invoice['fee'] = this.configService.get<number>('refund.disbursementFeeFix')?.toString();
       invoice['mwNo'] = check.id;
       invoice['orderId'] = jsonData.reqData.invoice.orderId;
       invoice['pgCode'] = 'xendit';
-      invoice['rate'] = process.env.DISBURSEMENT_FEE_FIX;
+      invoice['rate'] = this.configService.get<number>('refund.disbursementFeeFix')?.toString();
       invoice['refundAmount'] = check.refundAmount;
       invoice['status'] = await this.helper.statusWording(check.refundStatus);
       if (payoutData?.updated) {
