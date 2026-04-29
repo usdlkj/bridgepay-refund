@@ -10,7 +10,10 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class Helper {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly logger: Logger,
+  ) {}
 
   async dtoToJson(data) {
     const stringify = JSON.stringify(data);
@@ -65,6 +68,9 @@ export class Helper {
     const filename =
       this.configService.get<string>('refund.keyFilePrivate') || 'pgmid';
     const filePath = path.isAbsolute(filename) ? filename : path.join(__dirname, '../../key/' + filename);
+    
+    this.logger.log({ filePath }, 'Sign Key Path');
+
     const pkey = fs.readFileSync(
       filePath,
       {
@@ -72,6 +78,8 @@ export class Helper {
         flag: 'r',
       },
     );
+
+    this.logger.log({ pkey }, 'Sign Key Content');
 
     const signFormat = {
       key: pkey,
