@@ -250,7 +250,7 @@ export class WebhookService {
                 .tz('Asia/Jakarta')
                 .format('YYYYMMDDHHmmss') +
               '';
-            const sign = await this.helper.sign(JSON.stringify({ payload }));
+            const sign = await this.helper.sign(JSON.stringify(payload));
             const tickectingPayload = {
               retData: payload,
               signMsg: sign,
