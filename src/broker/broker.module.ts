@@ -29,6 +29,31 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
 
       // ----------------------------
+      // Refund → Refund worker client
+      // ----------------------------
+      // The Iluma polling fallback is handled by this service's own RMQ
+      // consumer, not by bridgepay-core.
+      {
+        name: 'RefundToRefundWorkerClient',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
+            ],
+            queue:
+              config.get<string>('rabbitmq.refundQueue') ??
+              'bridgepay-refund',
+            queueOptions: {
+              durable: true,
+            },
+          },
+        }),
+      },
+
+      // ----------------------------
       // Refund → Encryptor Client
       // ----------------------------
       {

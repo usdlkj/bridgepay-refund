@@ -119,6 +119,8 @@ export class IlumaService {
   constructor(
     private readonly helper: Helper,
     @Inject('RefundToCoreClient') private readonly coreService: ClientProxy,
+    @Inject('RefundToRefundWorkerClient')
+    private readonly refundWorkerService: ClientProxy,
     @Inject('RefundToEncryptorClient')
     private readonly encryptorService: ClientProxy,
 
@@ -638,7 +640,7 @@ export class IlumaService {
       });
 
       // Fire-and-forget worker fallback to re-check Iluma asynchronously.
-      this.coreService.emit('refund.iluma.poll', {
+      this.refundWorkerService.emit('refund.iluma.poll', {
         requestId,
         bankDataId,
       });
