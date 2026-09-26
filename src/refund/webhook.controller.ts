@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Headers } from '@nestjs/common';
 import { WebhookService } from './webhook.service';
 import { XenditWebhookDto } from './dto/xendit-webhook.dto';
-import { MessagePattern } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { XenditWebhooRpcDto } from './dto/xendit-webhook-rpc.dto';
 
 @Controller('/api/v2/webhook')
@@ -27,7 +27,7 @@ export class WebhookController {
   }
 
   @MessagePattern({ cmd: 'refund.webhook.xendit.disbursement' })
-  async webhookXenditRpc(@Body() payload: XenditWebhooRpcDto) {
+  async webhookXenditRpc(@Payload() payload: XenditWebhooRpcDto) {
     return this.webhookService.xendit(
       payload.payload,
       payload.headers,

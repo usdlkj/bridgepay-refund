@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body } from '@nestjs/common';
 import { RefundService } from './refund.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { StatusRefundDto } from './dto/status-refund.dto';
-import { MessagePattern } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('/api/v2')
 export class RefundController {
@@ -23,7 +23,7 @@ export class RefundController {
   }
 
   @MessagePattern({ cmd: 'refund.create' })
-  async createRefundRpc(@Body() payload: CreateRefundDto) {
+  async createRefundRpc(@Payload() payload: CreateRefundDto) {
     return this.refundService.create(payload);
   }
 
@@ -33,7 +33,7 @@ export class RefundController {
   }
 
   @MessagePattern({ cmd: 'refund.status' })
-  async queryRefundRpc(@Body() payload: StatusRefundDto) {
+  async queryRefundRpc(@Payload() payload: StatusRefundDto) {
     return this.refundService.status(payload);
   }
 }
