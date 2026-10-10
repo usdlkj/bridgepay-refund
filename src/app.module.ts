@@ -78,7 +78,7 @@ const loadDbSsl = (config: ConfigService) => {
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, rabbitmqConfig, refundConfig],
+      load: [appConfig, databaseConfig, rabbitmqConfig, refundConfig, redisConfig],
     }),
     LoggerModule.forRootAsync({
       imports: [ConfigModule],
@@ -121,12 +121,13 @@ const loadDbSsl = (config: ConfigService) => {
         /** OLD LOGIC */
         // const isEnabled = ['staging', 'production'].includes(config.get('nodeEnv') || '');
 
-        const isEnabled = config.get('redisUrl') !== '';
+        const redisUrl = config.get<string>('redis.redisUrl') || '';
+        const isEnabled = !!redisUrl;
         if (isEnabled) {
-          const keyvRedis = new KeyvRedis(config.get('redisUrl'));
+          const keyvRedis = new KeyvRedis(redisUrl);
           const keyv = new Keyv({
             store: keyvRedis,
-            namespace: 'bridgepay',
+            namespace: 'bridgepay:refund:cache',
             ttl: 300000,
           });
           // Health check at startup
@@ -136,8 +137,7 @@ const loadDbSsl = (config: ConfigService) => {
             return { stores: [keyv] };
           } catch (err) {
             console.warn(
-              '[Redis] Connection failed at startup, falling back to memory:',
-              err.message,
+              '[Redis] Connection failed at startup, falling back to memory',
             );
             return {
               stores: [
