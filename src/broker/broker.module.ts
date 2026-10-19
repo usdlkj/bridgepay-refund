@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RefundDeliveryService } from './refund-delivery.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
               config.get<string>('rabbitmq.url') ?? 'amqp://localhost:5672',
             ],
             queue: config.get<string>('rabbitmq.coreQueue') ?? 'bridgepay-core',
+            persistent: true,
             queueOptions: {
               durable: true,
             },
@@ -46,6 +48,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             queue:
               config.get<string>('rabbitmq.refundQueue') ??
               'bridgepay-refund',
+            persistent: true,
             queueOptions: {
               durable: true,
             },
@@ -69,6 +72,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
             queue:
               config.get<string>('rabbitmq.encryptorQueue') ??
               'bridgepay-encryptor',
+            persistent: true,
             queueOptions: {
               durable: true,
             },
@@ -77,6 +81,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
     ]),
   ],
-  exports: [ClientsModule],
+  providers: [RefundDeliveryService],
+  exports: [ClientsModule, RefundDeliveryService],
 })
 export class BrokerModule {}

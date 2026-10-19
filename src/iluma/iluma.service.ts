@@ -10,6 +10,7 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { firstValueFrom, timeout } from 'rxjs';
 import { IlumaCallLog } from './entities/iluma-call-log.entity';
 import { IlumaCallback } from './entities/iluma-callback.entity';
 import { ClientProxy } from '@nestjs/microservices';
@@ -640,10 +641,13 @@ export class IlumaService {
       });
 
       // Fire-and-forget worker fallback to re-check Iluma asynchronously.
-      this.refundWorkerService.emit('refund.iluma.poll', {
-        requestId,
-        bankDataId,
-      });
+      // Wait for broker confirmation, not for the background worker to finish.
+      await firstValueFrom(
+        this.refundWorkerService.emit('refund.iluma.poll', {
+          requestId,
+          bankDataId,
+        }).pipe(timeout(5000)),
+      );
 
       return 'timeout';
     }

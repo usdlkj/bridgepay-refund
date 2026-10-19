@@ -51,14 +51,8 @@ async function bootstrap() {
   await app.init();
 
   // -------------------------------
-  // PHASE 3 — START HTTP SERVER
-  // -------------------------------
-  const port = config.get<number>('port', 3000);
-  await app.listen(port, '0.0.0.0');
-
-  // -------------------------------
-  // PHASE 4 — START MICROSERVICE
-  // (RMQ errors will not kill the app)
+  // PHASE 3 — START MICROSERVICE
+  // Keep HTTP readiness unavailable until the Refund consumer is connected.
   // -------------------------------
   try {
     const nodeEnv = config.get<string>('nodeEnv');
@@ -91,14 +85,22 @@ async function bootstrap() {
         queue: rmqQueue,
         queueOptions: { durable: true },
         socketOptions,
-        noAck: true,
+        noAck: false,
+        prefetchCount: 10,
       },
     });
 
     await app.startAllMicroservices();
   } catch (err) {
     console.error('>>> Failed to start microservices:', err);
+    throw err;
   }
+
+  // -------------------------------
+  // PHASE 4 — START HTTP SERVER
+  // -------------------------------
+  const port = config.get<number>('port', 3000);
+  await app.listen(port, '0.0.0.0');
 
   // -------------------------------
   // PHASE 5 — SHUTDOWN HOOKS

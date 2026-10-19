@@ -10,6 +10,7 @@ import { RefundBank } from 'src/refund/entities/refund-bank.entity';
 import { ConfigurationModule } from 'src/configuration/configuration.module';
 import { BankData } from './entities/bank-data.entity';
 import { ConfigModule } from '@nestjs/config';
+import { IlumaWorkerController } from './iluma.worker.controller';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { ConfigModule } from '@nestjs/config';
     ConfigurationModule,
   ],
   providers: [IlumaService, Helper],
-  controllers: [IlumaController],
+  controllers: [IlumaController, IlumaWorkerController],
   exports: [IlumaService, Helper],
 })
 export class IlumaModule {}

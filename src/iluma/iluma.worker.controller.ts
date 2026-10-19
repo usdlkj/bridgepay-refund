@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { IlumaService } from './iluma.service';
+import { RefundDeliveryService } from '../broker/refund-delivery.service';
 
 /**
  * IlumaWorkerController
@@ -11,7 +12,10 @@ import { IlumaService } from './iluma.service';
  */
 @Controller()
 export class IlumaWorkerController {
-  constructor(private readonly ilumaService: IlumaService) {}
+  constructor(
+    private readonly ilumaService: IlumaService,
+    private readonly delivery: RefundDeliveryService,
+  ) {}
 
   /**
    * Handle fallback polling jobs.
@@ -24,11 +28,11 @@ export class IlumaWorkerController {
    *
    * This will NOT return anything to the caller; it is fire-and-forget.
    */
-  @MessagePattern('refund.iluma.poll')
+  @EventPattern('refund.iluma.poll')
   async handleRefundIlumaPoll(
     @Payload() data: { requestId: string; bankDataId: string },
+    @Ctx() context: RmqContext,
   ) {
-    await this.ilumaService.pollIlumaResult(data);
-    return;
+    return this.delivery.handle(context, () => this.ilumaService.pollIlumaResult(data), true);
   }
 }
