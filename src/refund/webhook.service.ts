@@ -88,10 +88,12 @@ export class WebhookService {
     payload: XenditWebhookDto,
     callbackToken: string,
     rawPayload: any = null,
+    // Broker path only: Gateway already verified the token before queueing. The direct HTTP route must keep false.
+    tokenVerifiedUpstream = false,
   ) {
     // Validate callback token BEFORE processing any data
     // Token must be retrieved from bridgepay-core via RabbitMQ
-    if (!callbackToken) {
+    if (!tokenVerifiedUpstream && !callbackToken) {
       this.logger.error('Webhook callback token is missing');
       throw new HttpException(
         {
@@ -123,7 +125,7 @@ export class WebhookService {
       );
     }
 
-    if (!credential || !credential.callbackToken) {
+    if (!credential || (!tokenVerifiedUpstream && !credential.callbackToken)) {
       this.logger.error('Invalid credential: callback token not found');
       throw new HttpException(
         {
@@ -135,7 +137,7 @@ export class WebhookService {
     }
 
     // Validate token using strict equality to prevent type coercion issues
-    if (callbackToken !== credential.callbackToken) {
+    if (!tokenVerifiedUpstream && callbackToken !== credential.callbackToken) {
       this.logger.error('Webhook token validation failed', {
         receivedTokenLength: callbackToken?.length || 0,
         expectedTokenLength: credential.callbackToken?.length || 0,

@@ -37,7 +37,7 @@ export class WebhookController {
     @Ctx() context: RmqContext,
   ) {
     return this.delivery.handle(context, () =>
-      this.webhookService.xendit(payload.payload, payload.headers, payload.req),
+      this.webhookService.xendit(payload.payload, undefined, payload.req, true),
       true,
     );
   }
