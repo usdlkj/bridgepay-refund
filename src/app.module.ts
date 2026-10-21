@@ -93,6 +93,7 @@ const loadDbSsl = (config: ConfigService) => {
                 '/health',
                 '/metrics',
                 '/health/liveness',
+                '/health/readiness',
               ];
               if (excludedRoutes.includes(req.url)) return 'silent';
               return err || res.statusCode >= 500 ? 'error' : 'info';
