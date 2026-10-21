@@ -1,16 +1,45 @@
 ---
 name: Build & Push bridgepay-refund Image (ECR)
 
+# Branch flow: work branch -> staging -> deploy -> main.
+# staging: verify only (build + tests), nothing is published or deployed.
+# deploy:  publish the image and update the GitOps repo; only commits that
+#          were already on staging are accepted.
 on:
   push:
-    branches: ["deploy"]
+    branches: ["staging", "deploy"]
+  pull_request:
+    branches: ["staging"]
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
+  verify:
+    if: github.ref != 'refs/heads/deploy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npx nest build
+
+      - name: Test
+        run: npm test
+
   build-and-push:
+    if: github.ref == 'refs/heads/deploy'
     runs-on: ubuntu-latest
 
     env:
@@ -29,6 +58,17 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --force --tags
+
+      - name: Require that this commit was tested on staging
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin staging
+          if ! git merge-base --is-ancestor HEAD origin/staging; then
+            echo "ERROR: this commit is not on the staging branch."
+            echo "Merge the work to staging and test it there, then fast-forward deploy to it."
+            exit 1
+          fi
 
       - name: Determine release tag for this commit
         id: meta
@@ -66,6 +106,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build & push image to ECR
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -80,15 +121,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "Pushed digest: ${{ steps.build-and-push.outputs.digest }}"
+          echo "Pushed digest: ${{ steps.build.outputs.digest }}"
+
+      - name: Checkout GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: usdlkj/bridgepay-deploy
+          ref: deploy
+          path: gitops
+          ssh-key: ${{ secrets.GITOPS_DEPLOY_KEY }}
 
       - name: Update image tag in GitOps repo
         shell: bash
         run: |
           set -euo pipefail
-          git clone https://usdlkj:${{ secrets.GITOPS_PAT }}@github.com/usdlkj/bridgepay-deploy.git gitops
           cd gitops
-          git checkout deploy
           sed -i "s|image: .*bridgepay/refund.*|image: ${{ steps.meta.outputs.image_uri }}|g" \
             envs/current/refund/deployment.yaml
           git config user.email "ci@kcic.co.id"
