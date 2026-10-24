@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { httpLogOptions } from './common/logging/http-log';
 import { CacheableMemory, Keyv } from 'cacheable';
 import KeyvRedis from '@keyv/redis';
 import { isDevOrTest } from './utils/env.utils';
@@ -88,16 +89,8 @@ const loadDbSsl = (config: ConfigService) => {
         const logsFolder = configService.get<string>('logsFolder');
         return {
           pinoHttp: {
-            customLogLevel: (req, res, err) => {
-              const excludedRoutes = [
-                '/health',
-                '/metrics',
-                '/health/liveness',
-                '/health/readiness',
-              ];
-              if (excludedRoutes.includes(req.url)) return 'silent';
-              return err || res.statusCode >= 500 ? 'error' : 'info';
-            },
+            // Allow-list serializers (no credential headers or query values) and probe silencing: audit T43
+            ...httpLogOptions(),
             transport: isDevOrTest(env)
               ? logsFolder !== ''
                 ? {
