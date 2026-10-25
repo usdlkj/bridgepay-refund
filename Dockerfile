@@ -1,5 +1,5 @@
 # Use Node.js as base image
-FROM node:22-alpine AS builder
+FROM node:22.23.4-alpine AS builder
 
 # Set the working directory
 WORKDIR /usr/src/app
@@ -17,7 +17,7 @@ COPY . .
 RUN npx nest build
 
 # Use a smaller base image for production
-FROM node:22-alpine
+FROM node:22.23.4-alpine
 
 # Install curl (for healthcheck)
 RUN apk add --no-cache curl
