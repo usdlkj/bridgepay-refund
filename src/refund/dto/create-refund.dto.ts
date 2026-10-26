@@ -33,7 +33,7 @@ class RefundAccountDto {
   @IsNotEmpty()
   idNo: string;
   
-  @IsIn(['1', '2', '3'])
+  @IsIn(['A', 'B'])
   idType: string;
 }
 
