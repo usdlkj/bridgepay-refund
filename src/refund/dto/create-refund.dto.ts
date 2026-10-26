@@ -5,7 +5,7 @@ import {
   ValidateNested,
   IsOptional,
   IsObject,
-  IsIn,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -33,7 +33,9 @@ class RefundAccountDto {
   @IsNotEmpty()
   idNo: string;
   
-  @IsIn(['A', 'B'])
+  // Real traffic carries 1, B, KTP and Passport (T47); the value is stored and never used, so bound it, do not enumerate it.
+  @IsString()
+  @Matches(/^[A-Za-z0-9]{1,10}$/)
   idType: string;
 }
 

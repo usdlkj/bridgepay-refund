@@ -19,12 +19,12 @@ const payload = (idType: unknown) => ({
 
 const errors = (idType: unknown) => validate(plainToInstance(CreateRefundDto, payload(idType)));
 
-describe('CreateRefundDto idType (A = KTP, B = passport)', () => {
-  it.each(['A', 'B'])('accepts %s', async (code) => {
+describe('CreateRefundDto idType (real traffic: 1, B, KTP, Passport; spec: A, B)', () => {
+  it.each(['1', 'B', 'A', 'KTP', 'Passport', '2', '3'])('accepts %s', async (code) => {
     expect(await errors(code)).toHaveLength(0);
   });
 
-  it.each(['1', '2', '3', 'C', 'a', '', 1, null])('rejects %p', async (code) => {
+  it.each(['', ' ', 'A B', 'KTP!', 'ABCDEFGHIJK', 1, null, undefined])('rejects %p', async (code) => {
     expect((await errors(code)).length).toBeGreaterThan(0);
   });
 });
