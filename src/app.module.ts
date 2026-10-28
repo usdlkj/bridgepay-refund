@@ -14,7 +14,6 @@ import { isDevOrTest } from './utils/env.utils';
 import { IlumaModule } from './iluma/iluma.module';
 import { RefundModule } from './refund/refund.module';
 import { ConfigurationModule } from './configuration/configuration.module';
-import { ApiLogDebugModule } from './api-log-debug/api-log-debug.module';
 import { readFileSync } from 'fs';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
@@ -200,7 +199,6 @@ const loadDbSsl = (config: ConfigService) => {
     RefundModule,
     ReportModule,
     ConfigurationModule,
-    ApiLogDebugModule,
   ],
   controllers: [AppController],
   providers: [AppService],

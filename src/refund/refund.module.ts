@@ -17,7 +17,6 @@ import { WebhookController } from './webhook.controller';
 import { IlumaCallLog } from 'src/iluma/entities/iluma-call-log.entity';
 import { ConfigurationModule } from 'src/configuration/configuration.module';
 import { YggdrasilModule } from 'src/yggdrasil/yggdrasil.module';
-import { ApiLogDebugModule } from 'src/api-log-debug/api-log-debug.module';
 import { RefundLog } from './entities/refund-log.entity';
 import { TicketingCallLog } from './entities/ticketing-call-log.entity';
 import { EncryptorClient } from '../utils/encryptor.client';
@@ -41,7 +40,6 @@ import { AuthModule } from '../auth/auth.module';
     BrokerModule,
     ConfigurationModule,
     YggdrasilModule,
-    ApiLogDebugModule,
     AuthModule,
   ],
   providers: [

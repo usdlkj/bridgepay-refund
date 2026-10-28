@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
+import { BrokerModule } from 'src/broker/broker.module';
 import { ConfigurationService } from './configuration.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Configuration } from './entities/configuration.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Configuration])],
+  imports: [BrokerModule],
   providers: [ConfigurationService],
   exports: [ConfigurationService],
 })

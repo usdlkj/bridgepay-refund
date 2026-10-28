@@ -153,7 +153,6 @@ export class WebhookService {
 
     // Token validated successfully - proceed with processing
     try {
-
       const payloadToStore = rawPayload || payload;
       const payout = payload.data;
       if (!payout) {
@@ -384,7 +383,7 @@ export class WebhookService {
               } else {
                 const tyrPeriod =
                   await this.configurationService.findByConfigName(
-                    '⁠REFUND_TRY_TIME_PERIOD',
+                    'REFUND_TRY_TIME_PERIOD',
                   );
                 let configTryPeriod = 10;
                 if (tyrPeriod) {
