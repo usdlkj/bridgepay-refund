@@ -84,6 +84,34 @@ describe('RefundNotificationService', () => {
       ).toBeNull();
     });
 
+    it('allows a fail notice one retry (2 attempts) and a success notice 4', async () => {
+      const { service, manager, ran } = setup({
+        'INSERT INTO refund_notifications': [{ id: 'x' }],
+      });
+      expect(service.failMaxAttempts).toBe(2);
+      await service.enqueue(manager, { id: 'R1' }, 'fail', 'https://t/n', {});
+      await service.enqueue(
+        manager,
+        { id: 'R2' },
+        'success',
+        'https://t/n',
+        {},
+      );
+      const [fail, success] = ran('INSERT INTO refund_notifications');
+      expect(fail.params[5]).toBe(2);
+      expect(success.params[5]).toBe(4);
+    });
+
+    it('lets the fail-notice retry count be configured', () => {
+      expect(
+        setup({}, { RETRY_FAIL_NOTIFICATION_ATTEMPTS: 2 }).service
+          .failMaxAttempts,
+      ).toBe(3);
+      expect(() => setup({}, { RETRY_FAIL_NOTIFICATION_ATTEMPTS: 0 })).toThrow(
+        'Invalid RETRY_FAIL_NOTIFICATION_ATTEMPTS',
+      );
+    });
+
     it('refuses a refund without a notify URL', async () => {
       const { service, manager } = setup();
       await expect(
@@ -219,6 +247,41 @@ describe('RefundNotificationService', () => {
       expect(ran('INSERT INTO refund_notification_alerts')[0].params[1]).toBe(
         'retry-exhausted',
       );
+    });
+
+    it('retries a rejected fail notice once, then alerts retry-exhausted and keeps status fail', async () => {
+      const first = setup(
+        owned(row({ type: 'fail', attempts: 1, max_attempts: 2 }), 'fail'),
+      );
+      await first.service.finish({
+        id: ID,
+        leaseToken: LEASE,
+        success: false,
+        reason: 'signature',
+      });
+      expect(
+        first.ran('UPDATE refund_notifications SET state=$2')[0].params[1],
+      ).toBe('pending');
+      expect(first.ran('INSERT INTO refund_notification_alerts')).toHaveLength(
+        0,
+      );
+
+      const second = setup(
+        owned(row({ type: 'fail', attempts: 2, max_attempts: 2 }), 'fail'),
+      );
+      await second.service.finish({
+        id: ID,
+        leaseToken: LEASE,
+        success: false,
+        reason: 'signature',
+      });
+      expect(
+        second.ran('UPDATE refund_notifications SET state=$2')[0].params[1],
+      ).toBe('failed');
+      expect(
+        second.ran('INSERT INTO refund_notification_alerts')[0].params[1],
+      ).toBe('retry-exhausted');
+      expect(second.ran('UPDATE refunds SET refund_status')).toHaveLength(0);
     });
 
     it('leaves status fail after a delivered fail notice', async () => {
