@@ -132,12 +132,15 @@ export class RefundNotificationService {
         });
         return null;
       }
-      const [claimed] = await m.query(
-        `UPDATE refund_notifications SET state='running', attempts=attempts+1,
+      // TypeORM returns [rows, affectedCount] for UPDATE ... RETURNING, unlike SELECT and INSERT.
+      const [claimed] = (
+        await m.query(
+          `UPDATE refund_notifications SET state='running', attempts=attempts+1,
         lease_token=$2,lease_until=now()+($3 * interval '1 millisecond'),updated_at=now()
         WHERE id=$1 RETURNING *`,
-        [row.id, randomUUID(), this.leaseMs],
-      );
+          [row.id, randomUUID(), this.leaseMs],
+        )
+      )[0];
       this.trace('refund-notification-claimed', claimed);
       return { ...claimed, refundNumber: refund.refund_ga_number };
     });

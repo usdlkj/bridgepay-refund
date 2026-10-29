@@ -12,7 +12,11 @@ function setup(
   const query = jest.fn(async (sql: string, params: any[] = []) => {
     calls.push({ sql, params });
     const hit = Object.keys(rules).find((k) => sql.includes(k));
-    return hit ? rules[hit] : [];
+    const rows = hit ? rules[hit] : [];
+    // The real driver wraps UPDATE ... RETURNING as [rows, affectedCount].
+    return /^\s*UPDATE/i.test(sql) && /RETURNING/i.test(sql)
+      ? [rows, rows.length]
+      : rows;
   });
   const manager = { query } as any;
   const db = { query, transaction: (cb: any) => cb(manager) } as any;
@@ -141,6 +145,13 @@ describe('RefundNotificationService', () => {
       const claimed: any = await service.claim();
       expect(claimed.refundNumber).toBe('GA1');
       expect(claimed.attempts).toBe(1);
+      // P04 needs these as top-level fields of the reply.
+      expect(claimed).toMatchObject({
+        id: ID,
+        lease_token: LEASE,
+        payload: { retData: {} },
+      });
+      expect(Array.isArray(claimed)).toBe(false);
       expect(ran("state='running', attempts=attempts+1")[0].params[2]).toBe(
         60000,
       );
