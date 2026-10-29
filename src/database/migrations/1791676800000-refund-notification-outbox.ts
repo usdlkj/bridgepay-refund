@@ -36,6 +36,13 @@ export class RefundNotificationOutbox1791676800000
       created_at timestamptz NOT NULL DEFAULT now(),
       UNIQUE (notification_id, kind)
     )`);
+    // Run as postgres; the Refund runtime role must read and write the outbox.
+    await q.query(
+      `GRANT SELECT, INSERT, UPDATE ON refund_notifications, refund_notification_alerts TO kcic_refund_user`,
+    );
+    await q.query(
+      `GRANT USAGE, SELECT ON SEQUENCE refund_notification_alerts_id_seq TO kcic_refund_user`,
+    );
   }
 
   async down(): Promise<void> {
