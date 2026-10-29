@@ -21,7 +21,6 @@ export class RefundNotificationService {
   readonly leaseMs: number;
   readonly retryDelayMs: number;
   readonly maxAttempts: number;
-  readonly failMaxAttempts: number;
   readonly agedMs: number;
 
   constructor(
@@ -46,10 +45,8 @@ export class RefundNotificationService {
       0,
       3600000,
     );
-    this.maxAttempts = integer('RETRY_PUSH_DATA_QUEUE_ATTEMPTS', 3, 1, 9) + 1;
-    // A fail notice is retried once: two rejections at different times point to an internal problem, not a transient one.
-    this.failMaxAttempts =
-      integer('RETRY_FAIL_NOTIFICATION_ATTEMPTS', 1, 1, 9) + 1;
+    // One retry: two rejections at different times point to an internal problem, not a transient one.
+    this.maxAttempts = integer('REFUND_NOTIFICATION_RETRIES', 1, 1, 9) + 1;
     this.agedMs = integer('NOTIFICATION_AGED_MS', 300000, 1000, 86400000);
   }
 
@@ -90,7 +87,7 @@ export class RefundNotificationService {
         type,
         notifyUrl,
         JSON.stringify(payload),
-        type === 'fail' ? this.failMaxAttempts : this.maxAttempts,
+        this.maxAttempts,
         this.retryDelayMs,
       ],
     );

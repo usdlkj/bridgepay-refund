@@ -30,15 +30,15 @@ const row = (over: Record<string, any> = {}) => ({
   payload: { retData: {} },
   created_at: new Date(),
   attempts: 1,
-  max_attempts: 4,
+  max_attempts: 2,
   state: 'running',
   ...over,
 });
 
 describe('RefundNotificationService', () => {
-  it('uses the payment flow settings: 4 attempts, 60 s lease and delay', () => {
+  it('allows one retry (2 attempts), with a 60 s lease and delay', () => {
     const { service } = setup();
-    expect(service.maxAttempts).toBe(4);
+    expect(service.maxAttempts).toBe(2);
     expect(service.leaseMs).toBe(60000);
     expect(service.retryDelayMs).toBe(60000);
     expect(service.agedMs).toBe(300000);
@@ -72,7 +72,7 @@ describe('RefundNotificationService', () => {
         'success',
         'https://t/n',
         '{"a":1}',
-        4,
+        2,
         60000,
       ]);
     });
@@ -84,11 +84,10 @@ describe('RefundNotificationService', () => {
       ).toBeNull();
     });
 
-    it('allows a fail notice one retry (2 attempts) and a success notice 4', async () => {
+    it('queues both notice types with 2 attempts', async () => {
       const { service, manager, ran } = setup({
         'INSERT INTO refund_notifications': [{ id: 'x' }],
       });
-      expect(service.failMaxAttempts).toBe(2);
       await service.enqueue(manager, { id: 'R1' }, 'fail', 'https://t/n', {});
       await service.enqueue(
         manager,
@@ -99,16 +98,15 @@ describe('RefundNotificationService', () => {
       );
       const [fail, success] = ran('INSERT INTO refund_notifications');
       expect(fail.params[5]).toBe(2);
-      expect(success.params[5]).toBe(4);
+      expect(success.params[5]).toBe(2);
     });
 
-    it('lets the fail-notice retry count be configured', () => {
+    it('lets the retry count be configured and rejects an invalid one', () => {
       expect(
-        setup({}, { RETRY_FAIL_NOTIFICATION_ATTEMPTS: 2 }).service
-          .failMaxAttempts,
-      ).toBe(3);
-      expect(() => setup({}, { RETRY_FAIL_NOTIFICATION_ATTEMPTS: 0 })).toThrow(
-        'Invalid RETRY_FAIL_NOTIFICATION_ATTEMPTS',
+        setup({}, { REFUND_NOTIFICATION_RETRIES: 3 }).service.maxAttempts,
+      ).toBe(4);
+      expect(() => setup({}, { REFUND_NOTIFICATION_RETRIES: 0 })).toThrow(
+        'Invalid REFUND_NOTIFICATION_RETRIES',
       );
     });
 
@@ -183,8 +181,10 @@ describe('RefundNotificationService', () => {
       expect(ran('refund_notification_alerts')).toHaveLength(0);
     });
 
-    it('retries (pending) after a failed attempt and alerts from the second failure', async () => {
-      const first = setup(owned(row({ attempts: 1 }), 'success'));
+    it('with more than 2 attempts configured, alerts repeated-failure from the second failure', async () => {
+      const first = setup(
+        owned(row({ attempts: 1, max_attempts: 4 }), 'success'),
+      );
       await first.service.finish({
         id: ID,
         leaseToken: LEASE,
@@ -201,7 +201,9 @@ describe('RefundNotificationService', () => {
       );
       expect(first.ran('UPDATE refunds SET refund_status')).toHaveLength(0);
 
-      const second = setup(owned(row({ attempts: 2 }), 'success'));
+      const second = setup(
+        owned(row({ attempts: 2, max_attempts: 4 }), 'success'),
+      );
       await second.service.finish({
         id: ID,
         leaseToken: LEASE,
@@ -214,7 +216,7 @@ describe('RefundNotificationService', () => {
     });
 
     it('sets ticketingFailed and alerts retry-exhausted when the success notice runs out of attempts', async () => {
-      const { service, ran } = setup(owned(row({ attempts: 4 }), 'success'));
+      const { service, ran } = setup(owned(row({ attempts: 2 }), 'success'));
       await service.finish({
         id: ID,
         leaseToken: LEASE,
@@ -235,7 +237,7 @@ describe('RefundNotificationService', () => {
 
     it('keeps status fail when the fail notice runs out of attempts', async () => {
       const { service, ran } = setup(
-        owned(row({ type: 'fail', attempts: 4 }), 'fail'),
+        owned(row({ type: 'fail', attempts: 2 }), 'fail'),
       );
       await service.finish({
         id: ID,
