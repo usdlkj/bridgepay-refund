@@ -10,12 +10,13 @@ import { RefundDetailTicket } from './entities/refund-detail-ticket.entity';
 import { RefundWebhookCall } from './entities/refund-webhook-call.entity';
 import { XenditWebhookDto } from './dto/xendit-webhook.dto';
 import { ConfigurationService } from 'src/configuration/configuration.service';
+import { RefundNotificationService } from 'src/refund-notification/refund-notification.service';
 import { YggdrasilService } from 'src/yggdrasil/yggdrasil.service';
 import { maskAccountNumber } from 'src/utils/mask.util';
 import * as moment from 'moment-timezone';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import axios from 'axios';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { Logger } from 'nestjs-pino';
 
 @Injectable()
@@ -47,6 +48,7 @@ export class WebhookService {
 
     private yggdrasilService: YggdrasilService,
     private readonly logger: Logger,
+    private readonly notifications: RefundNotificationService,
   ) {
     this.env = getEnv(this.configService);
   }
@@ -220,13 +222,13 @@ export class WebhookService {
 
           if (isSuccess) {
             const refundDate = moment().format('YYYY-MM-DD HH:mm:ss');
-            await this.repositoryRefund.update(check.id, {
+            const successFields = {
               refundStatus: RefundStatus.SUCCESS,
               disbursementId: disbursementId ?? check.disbursementId,
               disbursementResponse: this.sanitizeCallbackData(payout),
               refundDate: refundDate,
               updatedAt: moment().toISOString(),
-            });
+            };
 
             //generate payload
             const payload = {};
@@ -257,12 +259,11 @@ export class WebhookService {
               signMsg: sign,
             };
             //end generate payload
-            this.#notifTicketing(
-              check.refundData,
-              tickectingPayload,
-              check.id,
-              check.notifLog,
+            await this.#recordOutcome(
+              check,
               'success',
+              tickectingPayload,
+              successFields,
             );
           } else if (isInProgress) {
             await this.repositoryRefund.update(check.id, {
@@ -313,13 +314,10 @@ export class WebhookService {
                 retData: payload,
                 signMsg: sign,
               };
-              this.#notifTicketing(
-                check.refundData,
-                tickectingPayload,
-                check.id,
-                check.notifLog,
-                'fail',
-              );
+              await this.#recordOutcome(check, 'fail', tickectingPayload, {
+                refundStatus: RefundStatus.FAIL,
+                updatedAt: moment().toISOString(),
+              });
             } else {
               const tryCount =
                 await this.configurationService.findByConfigName(
@@ -373,13 +371,10 @@ export class WebhookService {
                   retData: payload,
                   signMsg: sign,
                 };
-                this.#notifTicketing(
-                  check.refundData,
-                  tickectingPayload,
-                  check.id,
-                  check.notifLog,
-                  'fail',
-                );
+                await this.#recordOutcome(check, 'fail', tickectingPayload, {
+                  refundStatus: RefundStatus.FAIL,
+                  updatedAt: moment().toISOString(),
+                });
               } else {
                 const tyrPeriod =
                   await this.configurationService.findByConfigName(
@@ -423,60 +418,22 @@ export class WebhookService {
     }
   }
 
-  async #notifTicketing(
-    refundData,
-    payload,
-    refundId,
-    notifLogData,
+  // Commits the refund outcome and its Ticketing notification intent together; P04 delivers it.
+  async #recordOutcome(
+    refund: Refund,
     type: 'success' | 'fail',
+    payload: Record<string, any>,
+    fields: QueryDeepPartialEntity<Refund>,
   ) {
-    //notif ticketing
-    const notifDate = moment().format('YYYY-MM-DD HH:mm:ss');
-    let notif = null;
-    try {
-      notif = await axios({
-        url: refundData.reqData.invoice.notifyUrl,
-        method: 'post',
-        data: payload,
-      });
-    } catch (err) {
-      this.logger.error('Failed to notify ticketing', {
-        err: err instanceof Error ? err.message : String(err),
-        url: refundData.reqData.invoice.notifyUrl,
-      });
-      if (type === 'fail') {
-        await this.repositoryRefund.update(refundId, {
-          refundStatus: RefundStatus.FAIL,
-          updatedAt: moment().toISOString(),
-        });
-      }
-      return;
-    }
-    const responseAt = moment().format('YYYY-MM-DD HH:mm:ss');
-    const notifLog = notifLogData ? notifLogData : [];
-    const notifLogPayload = {
-      payload: payload,
-      initAt: notifDate,
-      responseData: notif.data,
-      responseAt: responseAt,
-    };
-    notifLog.push(notifLogPayload);
-    const payloadNotif = {
-      notifLog: notifLog,
-      updatedAt: moment().toISOString(),
-    };
-    if (type == 'success') {
-      if (
-        (notif.status == 200 || notif.status == 201) &&
-        notif.data.retCode == 0
-      ) {
-        payloadNotif['refundStatus'] = RefundStatus.DONE;
-      }
-      await this.repositoryRefund.update(refundId, payloadNotif);
-    } else {
-      payloadNotif['refundStatus'] = RefundStatus.FAIL;
-      await this.repositoryRefund.update(refundId, payloadNotif);
-    }
-    //end notif ticketing
+    await this.repositoryRefund.manager.transaction(async (m) => {
+      await m.update(Refund, refund.id, fields);
+      await this.notifications.enqueue(
+        m,
+        refund,
+        type,
+        refund.refundData?.reqData?.invoice?.notifyUrl,
+        payload,
+      );
+    });
   }
 }

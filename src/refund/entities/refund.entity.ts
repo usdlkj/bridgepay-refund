@@ -25,6 +25,8 @@ export enum RefundStatus {
   CANCEL = 'cancel',
   RETRY = 'retry',
   PENDINGCHECKING = 'pendingChecking',
+  // The payout succeeded but Ticketing could not be told (as opposed to FAIL: the payout failed downstream).
+  TICKETINGFAILED = 'ticketingFailed',
 }
 
 export class SearchRefundStatus {
@@ -41,6 +43,7 @@ export class SearchRefundStatus {
     data['cancel'] = RefundStatus.CANCEL;
     data['retry'] = RefundStatus.RETRY;
     data['pendingchecking'] = RefundStatus.PENDINGCHECKING;
+    data['ticketingfailed'] = RefundStatus.TICKETINGFAILED;
 
     return data[search];
   }
